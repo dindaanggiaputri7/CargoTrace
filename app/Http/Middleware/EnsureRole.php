@@ -12,7 +12,6 @@ class EnsureRole
     {
         $user = $request->user();
         abort_unless($user && in_array($user->role, $roles, true), 403, 'Kamu tidak memiliki hak akses untuk fitur ini.');
-
         return $next($request);
     }
 }

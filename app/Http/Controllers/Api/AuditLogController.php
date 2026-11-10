@@ -10,12 +10,21 @@ class AuditLogController extends Controller
 {
     public function index(Request $request)
     {
+        $data = $request->validate([
+            'action' => ['nullable', 'string', 'max:80'],
+            'entity_type' => ['nullable', 'string', 'max:100'],
+            'entity_id' => ['nullable', 'integer', 'min:1'],
+            'user_id' => ['nullable', 'integer', 'min:1'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
         $query = AuditLog::query()->with('user:id,name,email');
-        $query->when($request->filled('action'), fn ($q) => $q->where('action', $request->input('action')));
-        $query->when($request->filled('entity_type'), fn ($q) => $q->where('entity_type', $request->input('entity_type')));
-        $query->when($request->filled('user_id'), fn ($q) => $q->where('user_id', $request->integer('user_id')));
-        $query->when($request->filled('date_from'), fn ($q) => $q->whereDate('created_at', '>=', $request->input('date_from')));
-        $query->when($request->filled('date_to'), fn ($q) => $q->whereDate('created_at', '<=', $request->input('date_to')));
-        return response()->json($query->latest('created_at')->paginate(min($request->integer('per_page', 30), 100)));
+        foreach (['action', 'entity_type', 'entity_id', 'user_id'] as $field) {
+            if (isset($data[$field])) $query->where($field, $data[$field]);
+        }
+        if (!empty($data['date_from'])) $query->whereDate('created_at', '>=', $data['date_from']);
+        if (!empty($data['date_to'])) $query->whereDate('created_at', '<=', $data['date_to']);
+        return response()->json($query->latest('created_at')->paginate($data['per_page'] ?? 30)->withQueryString());
     }
 }

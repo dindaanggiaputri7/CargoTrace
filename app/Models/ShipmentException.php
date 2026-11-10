@@ -17,7 +17,7 @@ class ShipmentException extends Model
     public const STATUSES = ['OPEN', 'INVESTIGATING', 'RESOLVED'];
 
     protected $fillable = [
-        'shipment_id', 'reported_by', 'exception_type', 'severity', 'status',
+        'shipment_id', 'reported_by', 'resolved_by', 'exception_type', 'severity', 'status',
         'title', 'description', 'detected_at', 'resolved_at', 'resolution_notes',
     ];
 
@@ -28,4 +28,5 @@ class ShipmentException extends Model
 
     public function shipment() { return $this->belongsTo(Shipment::class); }
     public function reporter() { return $this->belongsTo(User::class, 'reported_by'); }
+    public function resolver() { return $this->belongsTo(User::class, 'resolved_by'); }
 }

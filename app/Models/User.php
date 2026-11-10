@@ -14,13 +14,11 @@ class User extends Authenticatable
     public const ROLE_OPERATOR = 'operator';
     public const ROLE_CUSTOMER = 'customer';
 
-    protected $fillable = [
-        'name', 'email', 'password', 'role', 'is_active',
-    ];
+    public const ROLES = [self::ROLE_ADMIN, self::ROLE_OPERATOR, self::ROLE_CUSTOMER];
 
-    protected $hidden = [
-        'password', 'remember_token',
-    ];
+    protected $fillable = ['name', 'email', 'password', 'role', 'is_active'];
+
+    protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
     {
@@ -39,6 +37,7 @@ class User extends Authenticatable
     public function createdShipments() { return $this->hasMany(Shipment::class, 'created_by'); }
     public function trackingEvents() { return $this->hasMany(TrackingEvent::class, 'created_by'); }
     public function reportedExceptions() { return $this->hasMany(ShipmentException::class, 'reported_by'); }
+    public function resolvedExceptions() { return $this->hasMany(ShipmentException::class, 'resolved_by'); }
     public function notificationFeed() { return $this->hasMany(Notification::class); }
-    public function auditLogs() { return $this->hasMany(AuditLog::class); }
+    public function auditLogs() { return $this->hasMany(AuditLog::class, 'user_id'); }
 }

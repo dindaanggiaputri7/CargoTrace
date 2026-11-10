@@ -9,7 +9,10 @@ class Carrier extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['code', 'name', 'website', 'support_email', 'support_phone', 'is_active'];
+    protected $fillable = [
+        'code', 'name', 'contact_name', 'transport_mode', 'website',
+        'support_email', 'support_phone', 'is_active',
+    ];
 
     protected function casts(): array
     {

@@ -8,11 +8,15 @@ use App\Models\User;
 
 class NotificationService
 {
-    public function send(?User $user, string $type, string $title, string $message, ?Shipment $shipment = null, array $data = []): ?Notification
-    {
-        if (!$user) {
-            return null;
-        }
+    public function send(
+        ?User $user,
+        string $type,
+        string $title,
+        string $message,
+        ?Shipment $shipment = null,
+        array $data = []
+    ): ?Notification {
+        if (!$user) return null;
 
         return Notification::create([
             'user_id' => $user->id,

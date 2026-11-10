@@ -2,6 +2,5 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// CargoTrace frontend shell. All protected data is fetched through the existing Sanctum API.
+Route::view('/', 'cargotrace.app')->name('cargotrace.home');

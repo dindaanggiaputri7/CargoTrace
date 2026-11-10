@@ -18,6 +18,8 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
+        // Public registration can create CUSTOMER accounts only.
+        $data['email'] = strtolower($data['email']);
         $user = User::create($data + ['role' => User::ROLE_CUSTOMER, 'is_active' => true]);
         $token = $user->createToken('cargotrace-client')->plainTextToken;
 
@@ -27,11 +29,11 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $data = $request->validate([
-            'email' => ['required', 'email'],
+            'email' => ['required', 'email', 'max:255'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $data['email'])->first();
+        $user = User::query()->where('email', strtolower($data['email']))->first();
         if (!$user || !Hash::check($data['password'], $user->password)) {
             throw ValidationException::withMessages(['email' => ['Email atau password tidak sesuai.']]);
         }

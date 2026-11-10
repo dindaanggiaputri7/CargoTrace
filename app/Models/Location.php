@@ -10,8 +10,8 @@ class Location extends Model
     use HasFactory;
 
     protected $fillable = [
-        'code', 'name', 'type', 'city', 'country', 'country_code',
-        'address', 'latitude', 'longitude',
+        'code', 'name', 'type', 'address', 'city', 'region', 'country',
+        'country_code', 'timezone', 'latitude', 'longitude',
     ];
 
     protected function casts(): array

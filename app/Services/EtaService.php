@@ -7,29 +7,33 @@ use App\Models\Shipment;
 class EtaService
 {
     /**
-     * Threshold contract: <= 0h ON_TIME, >0-6h LOW, >6-24h MEDIUM, >24h HIGH.
-     * The exact +24-hour boundary is MEDIUM.
+     * SRS/PPT threshold: <= 0h ON_TIME; >0-6h LOW; >6-24h MEDIUM; >24h HIGH.
+     * Exactly +24 hours remains MEDIUM.
      */
     public function assess(Shipment $shipment): array
     {
         $expected = $shipment->expected_arrival_at;
         $eta = $shipment->current_eta ?? $expected;
-        $seconds = $expected->diffInSeconds($eta, false);
-        $delaySeconds = max(0, $seconds);
-
+        $delaySeconds = max(0, $eta->getTimestamp() - $expected->getTimestamp());
         $severity = match (true) {
-            $seconds <= 0 => 'ON_TIME',
-            $seconds <= 6 * 3600 => 'LOW',
-            $seconds <= 24 * 3600 => 'MEDIUM',
+            $delaySeconds <= 0 => 'ON_TIME',
+            $delaySeconds <= 6 * 3600 => 'LOW',
+            $delaySeconds <= 24 * 3600 => 'MEDIUM',
             default => 'HIGH',
         };
+
+        $hours = intdiv($delaySeconds, 3600);
+        $minutes = intdiv($delaySeconds % 3600, 60);
 
         return [
             'expected_arrival_at' => $expected,
             'current_eta' => $eta,
-            'delay_hours' => $delaySeconds > 0 ? (int) ceil($delaySeconds / 3600) : 0,
+            'delay_seconds' => $delaySeconds,
+            'delay_hours' => round($delaySeconds / 3600, 2),
+            'delay_minutes' => intdiv($delaySeconds, 60),
+            'delay_duration' => sprintf('%dh %02dm', $hours, $minutes),
             'delay_severity' => $severity,
-            'is_delayed' => $seconds > 0,
+            'is_delayed' => $delaySeconds > 0 && $shipment->status !== 'DELIVERED',
         ];
     }
 

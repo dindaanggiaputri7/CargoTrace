@@ -10,21 +10,25 @@ class NotificationController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Notification::where('user_id', $request->user()->id)->with('shipment:id,shipment_number,status');
-        if ($request->boolean('unread_only')) $query->whereNull('read_at');
-        return response()->json($query->latest()->paginate(min($request->integer('per_page', 20), 100)));
+        $data = $request->validate([
+            'unread' => ['nullable', 'boolean'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+        $query = Notification::query()->where('user_id', $request->user()->id)->with('shipment:id,shipment_number,status');
+        if ($request->boolean('unread')) $query->whereNull('read_at');
+        return response()->json($query->latest()->paginate($data['per_page'] ?? 20)->withQueryString());
     }
 
     public function markRead(Request $request, Notification $notification)
     {
         abort_unless((int) $notification->user_id === (int) $request->user()->id, 404);
-        $notification->update(['read_at' => now()]);
-        return response()->json(['data' => $notification->fresh()]);
+        $notification->update(['read_at' => $notification->read_at ?? now()]);
+        return response()->json(['message' => 'Notifikasi ditandai sudah dibaca.', 'data' => $notification->fresh()]);
     }
 
     public function markAllRead(Request $request)
     {
-        Notification::where('user_id', $request->user()->id)->whereNull('read_at')->update(['read_at' => now()]);
-        return response()->json(['message' => 'Semua notifikasi sudah ditandai telah dibaca.']);
+        $count = Notification::query()->where('user_id', $request->user()->id)->whereNull('read_at')->update(['read_at' => now()]);
+        return response()->json(['message' => 'Notifikasi belum dibaca telah ditandai selesai.', 'updated_count' => $count]);
     }
 }
