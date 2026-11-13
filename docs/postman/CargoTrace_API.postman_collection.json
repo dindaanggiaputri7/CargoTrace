@@ -30,6 +30,16 @@
       "key": "notificationId",
       "value": "1",
       "type": "string"
+    },
+    {
+      "key": "bookingId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "1",
+      "type": "string"
     }
   ],
   "item": [
@@ -108,7 +118,7 @@
             "description": "Copy the returned token into the collection variable token. Never commit a real token.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@cargotrace.test\",\n  \"password\": \"CargoTraceDemo!2026\"\n}",
+              "raw": "{\n  \"email\": \"your-role-account@example.test\",\n  \"password\": \"YOUR_LOCAL_PASSWORD\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -239,7 +249,13 @@
               ],
               "path": [
                 "api",
-                "users?per_page=20"
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -306,7 +322,13 @@
               ],
               "path": [
                 "api",
-                "audit-logs?per_page=30"
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "30"
+                }
               ]
             }
           }
@@ -338,7 +360,13 @@
               ],
               "path": [
                 "api",
-                "carriers?active_only=1"
+                "carriers"
+              ],
+              "query": [
+                {
+                  "key": "active_only",
+                  "value": "1"
+                }
               ]
             }
           }
@@ -405,7 +433,13 @@
               ],
               "path": [
                 "api",
-                "locations?per_page=20"
+                "locations"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -434,7 +468,13 @@
                 "api",
                 "locations",
                 "geocode",
-                "search?query=Port%20of%20Singapore"
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "Port of Singapore"
+                }
               ]
             }
           }
@@ -466,7 +506,13 @@
               ],
               "path": [
                 "api",
-                "shipments?per_page=15"
+                "shipments"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
               ]
             }
           }
@@ -880,7 +926,13 @@
               ],
               "path": [
                 "api",
-                "notifications?per_page=20"
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -960,6 +1012,691 @@
             "body": {
               "mode": "raw",
               "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Layer 2 \u2014 Customer Booking",
+      "description": "Booking, operator review, quotation, local mock payment, and booking-to-shipment conversion. No real payments are processed.",
+      "item": [
+        {
+          "name": "Customer \u2014 Submit booking request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/booking-requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "booking-requests"
+              ]
+            },
+            "description": "Login as CUSTOMER. Replace origin/destination IDs with records returned by GET /api/locations. This creates a booking request, not a shipment.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin_location_id\": 1,\n  \"destination_location_id\": 2,\n  \"desired_departure_at\": \"2026-12-01T08:00:00Z\",\n  \"desired_arrival_at\": \"2026-12-05T08:00:00Z\",\n  \"cargo_type\": \"General cargo\",\n  \"cargo_description\": \"Sample booking request\",\n  \"package_count\": 5,\n  \"total_weight\": 50,\n  \"weight_unit\": \"KG\",\n  \"total_volume\": 1.5,\n  \"volume_unit\": \"CBM\",\n  \"customer_notes\": \"Please handle carefully\",\n  \"items\": [\n    {\n      \"item_name\": \"Sample cartons\",\n      \"quantity\": 5,\n      \"description\": \"Demo item\",\n      \"unit_weight\": 10,\n      \"weight_unit\": \"KG\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json().data;",
+                  "if (data?.id) pm.collectionVariables.set(\"bookingId\", String(data.id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer / Operator \u2014 List booking requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/booking-requests?per_page=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "booking-requests"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Customer sees own requests; Operator/Admin see the authorized queue."
+          }
+        },
+        {
+          "name": "Customer / Operator \u2014 Booking detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/booking-requests/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "booking-requests",
+                "{{bookingId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Operator \u2014 Review booking (approve)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/booking-requests/{{bookingId}}/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "booking-requests",
+                "{{bookingId}}",
+                "review"
+              ]
+            },
+            "description": "Login as OPERATOR.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"approve\",\n  \"note\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Operator \u2014 Create quotation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/booking-requests/{{bookingId}}/quotation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "booking-requests",
+                "{{bookingId}}",
+                "quotation"
+              ]
+            },
+            "description": "Login as OPERATOR. The carrier must exist and be active.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"carrier_id\": 1,\n  \"amount\": 2500000,\n  \"currency\": \"IDR\",\n  \"expected_departure_at\": \"2026-12-01T08:00:00Z\",\n  \"expected_arrival_at\": \"2026-12-05T08:00:00Z\",\n  \"valid_until\": \"2026-11-30T23:59:00Z\",\n  \"terms\": \"Demo quotation. Update carrier and dates for your data.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Customer \u2014 Accept quotation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/booking-requests/{{bookingId}}/quotation/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "booking-requests",
+                "{{bookingId}}",
+                "quotation",
+                "accept"
+              ]
+            },
+            "description": "Login as the booking owner CUSTOMER.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Customer \u2014 Create demo payment intent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/booking-requests/{{bookingId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "booking-requests",
+                "{{bookingId}}",
+                "payments"
+              ]
+            },
+            "description": "LOCAL/TESTING ONLY. This creates a mock payment intent; no funds are charged.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json().data;",
+                  "if (data?.id) pm.collectionVariables.set(\"paymentId\", String(data.id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer \u2014 Confirm demo payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/booking-payments/{{paymentId}}/demo-confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "booking-payments",
+                "{{paymentId}}",
+                "demo-confirm"
+              ]
+            },
+            "description": "LOCAL/TESTING ONLY. Simulates confirmation without processing real money.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Operator \u2014 Convert booking to shipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/booking-requests/{{bookingId}}/convert",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "booking-requests",
+                "{{bookingId}}",
+                "convert"
+              ]
+            },
+            "description": "Login as OPERATOR. Booking must be READY_FOR_CONVERSION. Conversion is idempotent.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Layer 3 \u2014 Transport & Integrations",
+      "description": "Examples only. Use real IDs and provider-issued secrets. Provider webhook requires X-CargoTrace-Webhook-Secret. Never commit live credentials.",
+      "item": [
+        {
+          "name": "List transport assets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/transport-assets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "transport-assets"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create transport asset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/transport-assets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "transport-assets"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_code\": \"VSL-001\",\n  \"name\": \"MV Example Vessel\",\n  \"asset_type\": \"VESSEL\",\n  \"identifier_type\": \"MMSI\",\n  \"identifier_value\": \"525000001\",\n  \"carrier_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List transport trips",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/transport-trips",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "transport-trips"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create transport trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/transport-trips",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "transport-trips"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"carrier_id\": 1,\n  \"transport_mode\": \"SEA\",\n  \"origin_location_id\": 1,\n  \"destination_location_id\": 2,\n  \"scheduled_departure_at\": \"2026-11-14T08:00:00Z\",\n  \"scheduled_arrival_at\": \"2026-11-18T08:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Assign shipment to trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/transport-trips/1/assignments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "transport-trips",
+                "1",
+                "assignments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipment_id\": 1,\n  \"leg_order\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Add manual position",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/transport-trips/1/positions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "transport-trips",
+                "1",
+                "positions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": -6.1,\n  \"longitude\": 106.8,\n  \"observed_at\": \"2026-11-13T08:30:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Customer transport journeys",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/customer/transport-journeys",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "customer",
+                "transport-journeys"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Provider position webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/integrations/tracking/1/positions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "integrations",
+                "tracking",
+                "1",
+                "positions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trip_number\": \"TRIP-EXAMPLE\",\n  \"event_id\": \"provider-event-001\",\n  \"latitude\": -6.1,\n  \"longitude\": 106.8,\n  \"observed_at\": \"2026-11-13T08:30:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Midtrans notification URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/integrations/payments/midtrans/notification",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "integrations",
+                "payments",
+                "midtrans",
+                "notification"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"CTPAY-EXAMPLE\",\n  \"status_code\": \"200\",\n  \"gross_amount\": \"100000.00\",\n  \"signature_key\": \"<generated-by-midtrans>\",\n  \"transaction_status\": \"settlement\",\n  \"fraud_status\": \"accept\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

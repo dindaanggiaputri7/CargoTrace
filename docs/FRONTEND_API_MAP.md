@@ -23,3 +23,18 @@ All calls use same-origin `/api` requests with `Accept: application/json` and `A
 ## Added read-only endpoint
 
 `GET /api/customers` is protected by `auth:sanctum`, `active`, and `role:admin,operator`. It returns only active CUSTOMER accounts and is used by the Operator's Create Shipment dropdown. It does not expose the Admin-only user-management endpoints.
+
+## Layer 2 — Customer & Booking Management
+
+| Workspace / screen | API calls |
+|---|---|
+| Customer Request Shipment | `GET /locations`, `POST /booking-requests` |
+| Customer My Requests | `GET /booking-requests`, `GET /booking-requests/{id}` |
+| Customer Revise Request | `GET /booking-requests/{id}`, `PATCH /booking-requests/{id}` (only `NEEDS_REVISION`) |
+| Customer Review Quotation | `POST /booking-requests/{id}/quotation/accept`, `POST /booking-requests/{id}/quotation/decline` |
+| Customer Demo Checkout | `POST /booking-requests/{id}/payments`, `POST /booking-payments/{id}/demo-confirm` (local/testing only) |
+| Operator Booking Queue | `GET /booking-requests` |
+| Operator Review | `POST /booking-requests/{id}/review` |
+| Operator Prepare Quotation | `GET /carriers`, `POST /booking-requests/{id}/quotation` |
+| Operator Convert to Shipment | `POST /booking-requests/{id}/convert` |
+| Customer/Operator Notifications | `GET /notifications`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all` |

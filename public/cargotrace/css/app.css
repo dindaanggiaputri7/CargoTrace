@@ -54,3 +54,73 @@
 @media(max-width:1050px){.welcome-main{grid-template-columns:minmax(0,1fr) minmax(320px,.85fr);gap:30px}.welcome-copy h1{font-size:clamp(38px,5vw,54px)}.welcome-feature-row{gap:9px}.welcome-feature{gap:7px}}
 @media(max-width:760px){.welcome-page{padding:0 22px}.welcome-header{height:76px}.welcome-header-label{display:none}.welcome-main{grid-template-columns:1fr;gap:34px;padding:54px 0 45px}.welcome-copy{max-width:650px}.welcome-copy h1{font-size:clamp(42px,10vw,60px)}.welcome-description{font-size:13px}.welcome-feature-row{margin-top:36px}.welcome-visual{width:min(560px,100%);margin:0 auto;padding:5px 0 13px}.welcome-float-note{left:-8px;bottom:-1px}.welcome-footer{height:auto;min-height:52px}.auth-page{padding:0 20px}.auth-header{height:72px}.login-card{padding:29px}}
 @media(max-width:480px){.welcome-header .brand-icon{height:35px;width:35px}.welcome-header .brand-name{font-size:15px}.welcome-header-actions{gap:6px}.welcome-login-link{padding:9px 12px}.welcome-main{padding-top:43px}.welcome-copy h1{font-size:42px;letter-spacing:-1.9px}.welcome-cta-row{align-items:flex-start;flex-direction:column;gap:11px}.welcome-feature-row{grid-template-columns:1fr;gap:13px}.welcome-feature strong{font-size:10px}.welcome-feature small{font-size:9px}.route-preview-card{padding:15px;border-radius:15px}.route-preview-chip{font-size:6px}.route-preview-bottom{gap:8px}.route-preview-bottom strong{font-size:8px}.route-preview-bottom small{font-size:7px}.route-preview-caption{font-size:7px}.welcome-float-note{display:none}.welcome-footer{font-size:7px}.welcome-footer span:last-child{display:none}.auth-header .brand-sub{font-size:6px}.auth-back{font-size:9px}.login-card{padding:25px 21px}.auth-heading h1{font-size:22px}}
+
+/* Global multi-shipment map — additive dashboard enhancement v1.2.0 */
+.global-map-panel{padding:0;overflow:hidden}
+.global-map-head{padding:18px 18px 12px;margin:0;align-items:center}
+.global-map-head-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.global-map-count{display:inline-flex;align-items:center;min-height:28px;padding:5px 9px;border:1px solid #DDE7F4;border-radius:7px;background:#F4F8FE;color:#536B87;font-size:9px;font-weight:700;white-space:nowrap}
+.global-map-controls{display:grid;grid-template-columns:minmax(220px,1.5fr) repeat(3,minmax(130px,.8fr)) auto;gap:8px;padding:12px 18px;border-top:1px solid #EEF2F7;border-bottom:1px solid #E7EDF5;background:#FBFCFE;align-items:center}
+.global-map-search{min-width:0;width:100%;flex:initial}
+.global-map-controls .control{min-width:0;width:100%;height:35px;font-size:9px}
+.global-map-controls .btn{min-height:35px}
+.global-map-summary{padding:9px 18px;background:#F7FAFE;color:#60758E;font-size:9px;line-height:1.5;border-bottom:1px solid #E7EDF5}
+.global-map-canvas{height:490px;width:100%;z-index:1;background:#DCEAF3;outline:none}
+.global-map-canvas .leaflet-control-zoom a{color:#18385A}
+.global-map-legend{display:flex;align-items:center;gap:15px;flex-wrap:wrap;padding:12px 18px;background:#fff;border-top:1px solid #E7EDF5;color:#667B93;font-size:9px}
+.global-map-legend>span{display:inline-flex;align-items:center;gap:6px}
+.global-map-legend-pin{width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;color:#fff;font-style:normal;font-size:8px;font-weight:800;box-shadow:0 1px 4px #18385A22}
+.global-map-legend-pin.origin{background:#2563EB}.global-map-legend-pin.checkpoint{background:#0E9B88}.global-map-legend-pin.destination{background:#142D4E}
+.global-map-legend-line{width:22px;height:0;border-top:3px solid #2563EB;display:inline-block}
+.global-map-legend-line.planned{border-top-style:dashed;opacity:.75}
+.global-map-footnote{padding:10px 18px 13px;background:#fff;color:#8A98A8;font-size:8px;line-height:1.5}
+.global-map-tile-warning{padding:10px 18px;background:#FFF8EA;border-top:1px solid #F6E4BF;color:#91661F;font-size:9px}
+.global-map-leaflet-icon{background:transparent;border:0}
+.global-map-pin{width:29px;height:29px;border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;box-shadow:0 2px 9px #152D4B55}
+.global-map-pin-origin{background:#2563EB}.global-map-pin-checkpoint{background:#0E9B88}.global-map-pin-destination{background:#142D4E}
+.global-map-pin-cluster{width:35px;height:35px;border-radius:50%;background:#173858;gap:2px;display:flex;flex-direction:column;font-size:8px;line-height:1}
+.global-map-pin-cluster b{font-size:8px}.global-map-pin-cluster em{font-style:normal;font-size:9px;color:#D5E6FA}
+.global-map-popup,.global-map-cluster-popup{min-width:205px;max-width:290px;font-family:Inter,Arial,sans-serif;color:#435971}
+.global-map-popup-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+.global-map-popup-head strong{font-size:12px;color:#142D4E}
+.global-map-popup-meta{font-size:9px;color:#7D8DA0;margin-bottom:9px}
+.global-map-popup-route{padding:8px 9px;border-radius:7px;background:#F3F7FC;margin-bottom:8px;color:#25496F;font-size:10px;font-weight:700}
+.global-map-popup-route small{display:block;margin-top:4px;font-size:8px;color:#8594A5;font-weight:500}
+.global-map-popup-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #EDF1F6;font-size:8px}
+.global-map-popup-row span{color:#8795A5;flex:0 0 83px}.global-map-popup-row strong{color:#40566F;text-align:right;font-size:8px;line-height:1.45}
+.global-map-popup-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px}
+.global-map-popup-bottom .btn-link{font-size:9px}
+.global-map-cluster-popup>strong{display:block;margin-bottom:5px;font-size:11px;color:#142D4E}
+.global-map-cluster-place{font-size:9px;color:#7D8DA0;margin-bottom:5px}
+.global-map-cluster-row{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:7px 0;border-top:1px solid #EDF1F6}
+.global-map-cluster-row b{display:block;color:#24415F;font-size:9px}
+.global-map-cluster-row small{display:block;color:#8795A5;font-size:8px;margin-top:2px;max-width:190px;line-height:1.4}
+.global-map-cluster-row .btn-link{font-size:8px}
+.global-map-cluster-more{display:block;padding-top:6px;color:#8795A5}
+@media(max-width:1050px){.global-map-controls{grid-template-columns:minmax(180px,1fr) repeat(2,minmax(130px,.7fr))}.global-map-search{grid-column:span 2}.global-map-controls #global-map-clear{justify-self:start}}
+@media(max-width:650px){.global-map-head{align-items:flex-start;flex-direction:column}.global-map-head-actions{width:100%;justify-content:space-between}.global-map-controls{grid-template-columns:1fr 1fr;padding:10px 12px}.global-map-search{grid-column:1/-1}.global-map-controls #global-map-clear{grid-column:1/-1;width:100%}.global-map-summary,.global-map-legend,.global-map-footnote{padding-left:12px;padding-right:12px}.global-map-canvas{height:370px}.global-map-legend{gap:10px}}
+
+/* Layer 2 — Customer & Booking Management (additive to the existing blue CargoTrace design) */
+.booking-status{display:inline-flex;align-items:center;padding:5px 8px;border-radius:6px;font-size:8px;font-weight:800;letter-spacing:.2px;text-transform:uppercase;white-space:nowrap;background:#EEF3FA;color:#526B88}
+.booking-pending_review,.booking-needs_revision{background:#FFF5E6;color:#9B6A1C}
+.booking-approved,.booking-quoted,.booking-quote_accepted{background:#EAF1FF;color:#285DA8}
+.booking-pending_payment{background:#FFF7E8;color:#9B6A1C}
+.booking-ready_for_conversion,.booking-converted{background:#EAF7F0;color:#28784F}
+.booking-rejected,.booking-quote_declined,.booking-cancelled{background:#FFF0F1;color:#B53D48}
+.booking-form{padding:20px}
+.booking-form .panel-head{margin-bottom:18px}
+.booking-quote-total{font-size:28px;line-height:1.2;font-weight:800;letter-spacing:-.8px;color:var(--navy);padding:4px 0 16px}
+.notice-warning{background:#FFF8EA;border-color:#F2E3C5;color:#8C651F}
+.notice-warning .notice-icon{color:#A36D18}
+.booking-form .form-actions{margin-top:16px}
+@media(max-width:650px){.booking-form{padding:14px}.booking-quote-total{font-size:23px}}
+
+/* Layer 3 transport workspace */
+.grid-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.grid-cards>.panel{min-width:0}
+.panel-foot{display:flex;flex-wrap:wrap;gap:6px;padding-top:12px;margin-top:10px;border-top:1px solid var(--line)}
+.chip{display:inline-flex;align-items:center;padding:5px 8px;border-radius:20px;background:#EEF4FA;color:#315B83;font-size:9px;font-weight:700}
+#trip-create-panel[hidden]{display:none}
+@media(max-width:900px){.grid-cards{grid-template-columns:1fr}}
+
+.transport-live-map{height:340px;min-height:260px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#F3F6FA}

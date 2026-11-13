@@ -15,11 +15,17 @@
     pageTitle: 'Dashboard',
     pageData: null,
     selectedShipment: null,
+    selectedBooking: null,
     currentPage: 1,
     filters: {},
     map: null,
     mapLayer: null,
+    globalMapLayer: null,
+    globalMapShipments: [],
+    globalMapTotal: 0,
+    globalMapTruncated: false,
     notificationsUnread: 0,
+    transportRefreshTimer: null,
   };
 
   const icons = {
@@ -158,6 +164,7 @@
       {id:'locations',label:'Locations',icon:'locations'},
       {id:'shipments',label:'All Shipments',icon:'shipments'},
       {id:'audit',label:'Audit Logs',icon:'audit'},
+      {id:'transport',label:'Transport & Tracking',icon:'map'},
     ];
     if (role === 'operator') return [
       {section:'Workspace'},
@@ -166,16 +173,22 @@
       {id:'create',label:'Create Shipment',icon:'plus'},
       {id:'tracking',label:'Tracking',icon:'tracking'},
       {id:'exceptions',label:'Exceptions',icon:'exceptions'},
+      {id:'bookings',label:'Booking Requests',icon:'file'},
+      {id:'transport',label:'Transport & Tracking',icon:'map'},
+      {id:'notifications',label:'Notifications',icon:'bell',count:state.notificationsUnread},
     ];
     return [
       {section:'Workspace'},
       {id:'dashboard',label:'Dashboard',icon:'dashboard'},
       {id:'shipments',label:'My Shipments',icon:'shipments'},
+      {id:'request-booking',label:'Request Shipment',icon:'plus'},
+      {id:'bookings',label:'My Requests',icon:'file'},
+      {id:'transport',label:'Transport Journey',icon:'map'},
       {id:'notifications',label:'Notifications',icon:'bell',count:state.notificationsUnread},
       {id:'profile',label:'Profile',icon:'profile'},
     ];
   };
-  const titleFor = (page) => ({dashboard:'Dashboard',users:'Users',carriers:'Carriers',locations:'Locations',shipments:state.user?.role === 'customer' ? 'My Shipments' : 'Shipments',audit:'Audit Logs',create:'Create Shipment',tracking:'Tracking',exceptions:'Exceptions',notifications:'Notifications',profile:'Profile',detail:state.selectedShipment?.shipment_number || 'Shipment detail'}[page] || 'CargoTrace');
+  const titleFor = (page) => ({dashboard:'Dashboard',users:'Users',carriers:'Carriers',locations:'Locations',shipments:state.user?.role === 'customer' ? 'My Shipments' : 'Shipments',audit:'Audit Logs',create:'Create Shipment',tracking:'Tracking',exceptions:'Exceptions',bookings:state.user?.role==='customer'?'My Requests':'Booking Requests','request-booking':state.selectedBooking?'Revise Request':'Request Shipment',notifications:'Notifications',profile:'Profile',transport:'Transport & Tracking',detail:state.selectedShipment?.shipment_number || 'Shipment detail'}[page] || 'CargoTrace');
   const buildShell = () => {
     const user = state.user;
     const role = user.role;
@@ -195,7 +208,7 @@
         <main class="main-area">
           <header class="topbar">
             <div style="display:flex;align-items:center;gap:13px"><button class="icon-button mobile-toggle" data-action="toggle-menu" aria-label="Open navigation">${icon('menu')}</button><div class="breadcrumbs"><span>${role === 'admin' ? 'Administration' : role === 'operator' ? 'Operations' : user.name}</span>${icon('chevron')}<strong id="breadcrumb-current">${esc(titleFor(state.page))}</strong></div></div>
-            <div class="top-actions"><span class="utc-label">All times UTC</span>${role === 'customer' ? `<button class="icon-button" data-nav="notifications" title="Notifications">${icon('bell')}${state.notificationsUnread ? '<span class="notify-dot"></span>' : ''}</button>` : ''}<button class="user-menu" data-action="user-menu"><span class="avatar">${esc(initial(user.name))}</span><div><strong>${esc(user.name)}</strong><small>${esc(roleName(role))}</small></div></button><button class="icon-button" data-action="logout" title="Sign out">${icon('logout')}</button></div>
+            <div class="top-actions"><span class="utc-label">All times UTC</span>${['customer','operator'].includes(role) ? `<button class="icon-button" data-nav="notifications" title="Notifications">${icon('bell')}${state.notificationsUnread ? '<span class="notify-dot"></span>' : ''}</button>` : ''}<button class="user-menu" data-action="user-menu"><span class="avatar">${esc(initial(user.name))}</span><div><strong>${esc(user.name)}</strong><small>${esc(roleName(role))}</small></div></button><button class="icon-button" data-action="logout" title="Sign out">${icon('logout')}</button></div>
           </header>
           <div id="page-content" class="page-wrap"></div>
           <footer class="footerbar"><span>All systems operational · CargoTrace workspace</span><span>CargoTrace / ${esc(roleName(role))}</span></footer>
@@ -364,7 +377,7 @@
     try {
       if (!state.user && state.token) { const me=await api('/me'); state.user=me.data; }
       if (!state.user || !['admin','operator','customer'].includes(state.user.role)) throw new Error('Role akun tidak dikenali.');
-      const notif = state.user.role === 'customer' ? await api('/notifications?unread=1&per_page=1').catch(()=>null) : null;
+      const notif = ['customer','operator'].includes(state.user.role) ? await api('/notifications?unread=1&per_page=1').catch(()=>null) : null;
       state.notificationsUnread = Number(notif?.meta?.total ?? notif?.total ?? 0);
       state.page='dashboard'; buildShell(); await navigate('dashboard',false);
     } catch(err) { clearSession();showLogin(err.message); }
@@ -380,8 +393,10 @@
     if (page === 'carriers' && state.user.role !== 'admin') page='dashboard';
     if (page === 'locations' && state.user.role !== 'admin') page='dashboard';
     if (page === 'audit' && state.user.role !== 'admin') page='dashboard';
-    if (page === 'notifications' && state.user.role !== 'customer') page='dashboard';
+    if (page === 'notifications' && state.user.role === 'admin') page='dashboard';
     if (page === 'profile' && state.user.role !== 'customer') page='dashboard';
+    if (page === 'bookings' && state.user.role === 'admin') page='dashboard';
+    if (page === 'request-booking' && state.user.role !== 'customer') page='dashboard';
     if (!allowed.includes(page) && page !== 'create' && page !== 'tracking' && page !== 'exceptions' && page !== 'profile' && page !== 'notifications') page='dashboard';
     state.page=page; state.pageTitle=titleFor(page); state.currentPage=1;
     document.getElementById('breadcrumb-current').textContent=state.pageTitle;
@@ -390,8 +405,11 @@
     await renderPage();
   }
   async function renderPage() {
+    if(state.transportRefreshTimer){clearTimeout(state.transportRefreshTimer);state.transportRefreshTimer=null;}
     const host=document.getElementById('page-content'); if(!host)return;
+    if (state.map) { try { state.map.remove(); } catch (_) {} }
     state.map=null;
+    state.globalMapLayer=null;
     setLoading(host,'Loading your workspace…');
     try {
       switch(state.page) {
@@ -405,6 +423,9 @@
         case 'audit': await renderAudit(host); break;
         case 'tracking': await renderTracking(host); break;
         case 'exceptions': await renderExceptions(host); break;
+        case 'bookings': await renderBookings(host); break;
+        case 'transport': await renderTransport(host); break;
+        case 'request-booking': await renderRequestBooking(host); break;
         case 'notifications': await renderNotifications(host); break;
         case 'profile': renderProfile(host); break;
         default: await renderDashboard(host);
@@ -460,6 +481,244 @@
     const headers=`<th>Shipment / carrier</th>${customerView?'':'<th>Customer / reference</th>'}<th>${customerView?'Route':'Customer / route'}</th><th>Status</th><th>ETA / delivered · UTC</th><th>Delay</th><th></th>`;
     return `<div class="table-wrap"><table class="data-table"><thead><tr>${headers}</tr></thead><tbody>${rows || tableEmpty('No shipments match your filters.')}</tbody></table></div>`;
   }
+  function globalMapPanelHtml(customer) {
+    const title = customer ? 'Your shipment map' : 'Global shipment map';
+    const subtitle = customer
+      ? 'See the recorded origin, latest checkpoint and destination for your shipments.'
+      : 'Monitor routes across carriers and customers in one global view.';
+    return `<section class="panel global-map-panel section-spacer">
+      <div class="panel-head global-map-head">
+        <div><h3 class="panel-title">${title}</h3><p class="panel-subtitle">${subtitle}</p></div>
+        <div class="global-map-head-actions"><span class="global-map-count" id="global-map-count">Loading shipments…</span><button type="button" class="btn btn-secondary btn-sm" id="global-map-fit">${icon('map')} Fit all</button></div>
+      </div>
+      <div class="global-map-controls">
+        <div class="searchbox global-map-search">${icon('search')}<input id="global-map-search" class="control" type="search" placeholder="Search shipment, customer or route" autocomplete="off"></div>
+        <select id="global-map-status" class="control" aria-label="Filter by shipment status"><option value="">All statuses</option>${STATUS_FLOW.map(status=>`<option value="${status}">${status}</option>`).join('')}</select>
+        ${customer ? '' : '<select id="global-map-carrier" class="control" aria-label="Filter by carrier"><option value="">All carriers</option></select>'}
+        <select id="global-map-delay" class="control" aria-label="Filter by delay"><option value="">All ETA conditions</option><option value="1">Delayed only</option><option value="0">On time / delivered</option></select>
+        <button type="button" class="btn btn-quiet btn-sm" id="global-map-clear">Clear filters</button>
+      </div>
+      <div class="global-map-summary" id="global-map-summary">Loading saved shipment coordinates…</div>
+      <div id="global-shipment-map" class="global-map-canvas" role="application" aria-label="Interactive shipment route map"></div>
+      <div class="global-map-legend">
+        <span><i class="global-map-legend-pin origin">O</i> Origin</span>
+        <span><i class="global-map-legend-pin checkpoint">C</i> Last saved checkpoint</span>
+        <span><i class="global-map-legend-pin destination">D</i> Destination</span>
+        <span><i class="global-map-legend-line recorded"></i> Origin to checkpoint</span>
+        <span><i class="global-map-legend-line planned"></i> Planned connection</span>
+      </div>
+      <div class="global-map-footnote">Positions come from saved location and tracking-event coordinates. Route lines are schematic connectors, not road, sea or air navigation and not live GPS.</div>
+      <div class="global-map-tile-warning" id="global-map-tile-warning" hidden>Map tiles could not be loaded. Shipment information and saved coordinates remain available.</div>
+    </section>`;
+  }
+
+  async function fetchAllMapShipments() {
+    const first = await api('/shipments?per_page=100&page=1');
+    const firstPage = paginator(first);
+    const totalPages = Math.max(1, firstPage.meta.last_page || 1);
+    const pagesToLoad = Math.min(totalPages, 20);
+    const remaining = await Promise.all(Array.from({length: pagesToLoad - 1}, (_, index) =>
+      api(`/shipments?per_page=100&page=${index + 2}`).then(response => paginator(response).items)
+    ));
+    return {items:firstPage.items.concat(...remaining), total:firstPage.meta.total, truncated:totalPages > pagesToLoad};
+  }
+
+  function validMapPair(lat, lng) {
+    if (lat === null || lat === undefined || lat === '' || lng === null || lng === undefined || lng === '') return false;
+    const a = Number(lat), b = Number(lng);
+    return Number.isFinite(a) && Number.isFinite(b) && a >= -90 && a <= 90 && b >= -180 && b <= 180;
+  }
+
+  function mapLocationPoint(location, label) {
+    if (!location || !validMapPair(location.latitude, location.longitude)) return null;
+    return {lat:Number(location.latitude), lng:Number(location.longitude), name:location.city || location.name || label, country:location.country || ''};
+  }
+
+  function shipmentMapPoints(shipment) {
+    const origin = mapLocationPoint(shipment.origin, 'Origin');
+    const destination = mapLocationPoint(shipment.destination, 'Destination');
+    const event = shipment.latest_tracking_event || shipment.latestTrackingEvent || null;
+    const eventLocation = event?.location || null;
+    const lat = event?.latitude ?? eventLocation?.latitude;
+    const lng = event?.longitude ?? eventLocation?.longitude;
+    const checkpoint = validMapPair(lat, lng) ? {
+      lat:Number(lat), lng:Number(lng), name:eventLocation?.city || eventLocation?.name || 'Recorded checkpoint',
+      country:eventLocation?.country || '', time:event?.event_time || null, description:event?.description || '',
+    } : null;
+    return {origin, checkpoint, destination};
+  }
+
+  function mapRouteColor(shipment) {
+    const palette = ['#2563EB','#0E9B88','#D97706','#7C3AED','#D9465F','#0891B2','#4F46E5','#65A30D','#C2410C','#0F766E','#9333EA','#B45309'];
+    const seed = String(shipment.shipment_number || shipment.id || '1').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    return palette[seed % palette.length];
+  }
+
+  function mapPointsEqual(a,b) {
+    return !!a && !!b && Math.abs(a.lat-b.lat) < 0.00001 && Math.abs(a.lng-b.lng) < 0.00001;
+  }
+
+  function etaRemainingLabel(shipment) {
+    if (shipment.status === 'DELIVERED') return `Delivered · ${dateFmt(shipment.delivered_at || shipment.current_eta || shipment.expected_arrival_at, {time:true, year:true})}`;
+    const value = shipment.current_eta || shipment.expected_arrival_at;
+    if (!value) return 'ETA not recorded';
+    const diff = new Date(value).getTime() - Date.now();
+    if (!Number.isFinite(diff)) return 'ETA not available';
+    const totalMinutes = Math.floor(Math.abs(diff) / 60000);
+    const days = Math.floor(totalMinutes / 1440), hours = Math.floor((totalMinutes % 1440) / 60), minutes = totalMinutes % 60;
+    const duration = days ? `${days}d ${hours}h` : hours ? `${hours}h ${minutes}m` : `${minutes}m`;
+    return diff >= 0 ? `Estimated arrival in ${duration}` : `ETA passed by ${duration}`;
+  }
+
+  function globalMapPopupHtml(shipment, pointKind) {
+    const checkpoint = shipmentMapPoints(shipment).checkpoint;
+    const checkpointLabel = checkpoint ? `${checkpoint.name}${checkpoint.country ? ', ' + checkpoint.country : ''} · ${dateFmt(checkpoint.time, {time:true})}` : 'No checkpoint coordinates recorded';
+    const eta = shipment.status === 'DELIVERED' ? '<span class="severity-badge severity-on_time">DELIVERED</span>' : severityBadge(etaAssessment(shipment).severity);
+    return `<div class="global-map-popup">
+      <div class="global-map-popup-head"><strong>${esc(shipment.shipment_number || 'Shipment')}</strong>${statusBadge(shipment.status)}</div>
+      <div class="global-map-popup-meta">${esc(carrierName(shipment))} · ${esc(customerName(shipment))}</div>
+      <div class="global-map-popup-route"><span>${esc(routeName(shipment))}</span><small>Selected point: ${esc(human(pointKind))}</small></div>
+      <div class="global-map-popup-row"><span>Last checkpoint</span><strong>${esc(checkpointLabel)}</strong></div>
+      <div class="global-map-popup-row"><span>ETA</span><strong>${esc(dateFmt(shipment.status === 'DELIVERED' ? shipment.delivered_at : (shipment.current_eta || shipment.expected_arrival_at), {time:true, year:true}))}</strong></div>
+      <div class="global-map-popup-row"><span>Arrival outlook</span><strong>${esc(etaRemainingLabel(shipment))}</strong></div>
+      <div class="global-map-popup-bottom">${eta}<button type="button" class="btn-link" data-global-map-view="${Number(shipment.id)}">View shipment details →</button></div>
+    </div>`;
+  }
+
+  function bindGlobalMapPopup(marker) {
+    marker.on('popupopen', event => {
+      event.popup.getElement()?.querySelectorAll('[data-global-map-view]').forEach(button => {
+        button.addEventListener('click', () => viewShipment(button.dataset.globalMapView));
+      });
+    });
+  }
+
+  async function mountGlobalShipmentMap(host) {
+    const mapElement = host.querySelector('#global-shipment-map');
+    if (!mapElement) return;
+    const summary = host.querySelector('#global-map-summary');
+    const count = host.querySelector('#global-map-count');
+    try {
+      const loaded = await fetchAllMapShipments();
+      state.globalMapShipments = loaded.items;
+      state.globalMapTotal = loaded.total;
+      state.globalMapTruncated = loaded.truncated;
+      if (!window.L) {
+        mapElement.innerHTML = '<div class="map-fallback-empty"><strong>Map temporarily unavailable</strong><span>The Leaflet map library could not be loaded. Shipment data remains available in the shipment directory.</span></div>';
+        summary.textContent = 'Map library unavailable; saved shipment data is unchanged.';
+        return;
+      }
+
+      const customer = state.user.role === 'customer';
+      const carrierSelect = host.querySelector('#global-map-carrier');
+      if (carrierSelect) {
+        const carriers = new Map();
+        state.globalMapShipments.forEach(s => { if (s.carrier?.id) carriers.set(String(s.carrier.id), s.carrier.name || 'Carrier'); });
+        carrierSelect.innerHTML = '<option value="">All carriers</option>' + Array.from(carriers.entries()).sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=>`<option value="${esc(id)}">${esc(name)}</option>`).join('');
+      }
+
+      const map = window.L.map(mapElement, {scrollWheelZoom:true, preferCanvas:true}).setView([22, 10], 2);
+      state.map = map;
+      const tiles = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(map);
+      tiles.on('tileerror', () => { const warning = host.querySelector('#global-map-tile-warning'); if (warning) warning.hidden = false; });
+      const layer = window.L.featureGroup().addTo(map);
+      state.globalMapLayer = layer;
+      let bounds = [];
+
+      const search = host.querySelector('#global-map-search');
+      const statusFilter = host.querySelector('#global-map-status');
+      const delayFilter = host.querySelector('#global-map-delay');
+      const fitButton = host.querySelector('#global-map-fit');
+      const clearButton = host.querySelector('#global-map-clear');
+
+      function getFilteredShipments() {
+        const term = (search?.value || '').trim().toLowerCase();
+        const status = statusFilter?.value || '', carrier = carrierSelect?.value || '', delay = delayFilter?.value || '';
+        return state.globalMapShipments.filter(s => {
+          if (status && s.status !== status) return false;
+          if (carrier && String(s.carrier_id || s.carrier?.id || '') !== String(carrier)) return false;
+          const delayed = etaAssessment(s).delayed;
+          if (delay === '1' && !delayed) return false;
+          if (delay === '0' && delayed) return false;
+          if (term && ![s.shipment_number, customerName(s), carrierName(s), routeName(s), s.cargo_type].join(' ').toLowerCase().includes(term)) return false;
+          return true;
+        });
+      }
+
+      function renderMap() {
+        const filtered = getFilteredShipments();
+        layer.clearLayers(); bounds = [];
+        const buckets = new Map();
+        let checkpointCount = 0, noCoordinatesCount = 0, plottedCount = 0;
+        const addPoint = (shipment, kind, point) => {
+          if (!point) return;
+          const key = `${kind}:${point.lat.toFixed(4)}:${point.lng.toFixed(4)}`;
+          if (!buckets.has(key)) buckets.set(key, {kind, point, entries:[]});
+          buckets.get(key).entries.push({shipment, kind});
+          bounds.push([point.lat, point.lng]);
+        };
+
+        filtered.forEach(shipment => {
+          const p = shipmentMapPoints(shipment), color = mapRouteColor(shipment);
+          if (p.checkpoint) checkpointCount++;
+          if (!p.origin && !p.destination && !p.checkpoint) noCoordinatesCount++; else plottedCount++;
+          addPoint(shipment, 'origin', p.origin);
+          addPoint(shipment, 'checkpoint', p.checkpoint);
+          addPoint(shipment, 'destination', p.destination);
+          // Solid connector ends at the last saved checkpoint; dashed connector points toward the destination.
+          if (p.origin && p.checkpoint && !mapPointsEqual(p.origin,p.checkpoint)) {
+            window.L.polyline([[p.origin.lat,p.origin.lng],[p.checkpoint.lat,p.checkpoint.lng]], {color,weight:3,opacity:.86,lineCap:'round'}).addTo(layer);
+          }
+          if (p.checkpoint && p.destination && !mapPointsEqual(p.checkpoint,p.destination)) {
+            window.L.polyline([[p.checkpoint.lat,p.checkpoint.lng],[p.destination.lat,p.destination.lng]], {color,weight:2.6,opacity:.82,dashArray:'7 7',lineCap:'round'}).addTo(layer);
+          } else if (!p.checkpoint && p.origin && p.destination && !mapPointsEqual(p.origin,p.destination)) {
+            window.L.polyline([[p.origin.lat,p.origin.lng],[p.destination.lat,p.destination.lng]], {color,weight:2.6,opacity:.7,dashArray:'7 7',lineCap:'round'}).addTo(layer);
+          } else if (!p.origin && p.checkpoint && p.destination && !mapPointsEqual(p.checkpoint,p.destination)) {
+            window.L.polyline([[p.checkpoint.lat,p.checkpoint.lng],[p.destination.lat,p.destination.lng]], {color,weight:2.6,opacity:.7,dashArray:'7 7',lineCap:'round'}).addTo(layer);
+          }
+        });
+
+        const styles = {origin:{label:'O',title:'Origin'},checkpoint:{label:'C',title:'Last saved checkpoint'},destination:{label:'D',title:'Destination'}};
+        buckets.forEach(bucket => {
+          const style = styles[bucket.kind], multiple = bucket.entries.length > 1;
+          const html = multiple
+            ? `<span class="global-map-pin global-map-pin-${bucket.kind} global-map-pin-cluster"><b>${style.label}</b><em>${bucket.entries.length}</em></span>`
+            : `<span class="global-map-pin global-map-pin-${bucket.kind}">${style.label}</span>`;
+          const marker = window.L.marker([bucket.point.lat,bucket.point.lng], {icon:window.L.divIcon({className:'global-map-leaflet-icon',html,iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-15]}),title:`${style.title}: ${bucket.point.name}`,riseOnHover:true}).addTo(layer);
+          const place = `${bucket.point.name}${bucket.point.country ? ', ' + bucket.point.country : ''}`;
+          const popup = multiple
+            ? `<div class="global-map-cluster-popup"><strong>${style.title} · ${bucket.entries.length} shipments</strong><div class="global-map-cluster-place">${esc(place)}</div>${bucket.entries.slice(0,25).map(entry=>`<div class="global-map-cluster-row"><div><b>${esc(entry.shipment.shipment_number || 'Shipment')}</b><small>${esc(carrierName(entry.shipment))} · ${esc(routeName(entry.shipment))}</small></div><button type="button" class="btn-link" data-global-map-view="${Number(entry.shipment.id)}">View →</button></div>`).join('')}${bucket.entries.length>25?`<small class="global-map-cluster-more">${bucket.entries.length-25} more shipments at this point.</small>`:''}</div>`
+            : globalMapPopupHtml(bucket.entries[0].shipment,bucket.kind);
+          marker.bindPopup(popup,{maxWidth:350});
+          bindGlobalMapPopup(marker);
+        });
+
+        summary.textContent = `${filtered.length} shipments visible · ${plottedCount} with saved coordinates · ${checkpointCount} with a saved checkpoint · ${noCoordinatesCount} awaiting coordinates${loaded.truncated ? ` · Loaded latest ${state.globalMapShipments.length} of ${loaded.total}; narrow the view to inspect.` : ''}`;
+        count.textContent = `${filtered.length} / ${state.globalMapTotal} shipments`;
+        if (bounds.length >= 2) map.fitBounds(window.L.latLngBounds(bounds).pad(0.12),{maxZoom:5});
+        else if (bounds.length === 1) map.setView(bounds[0],5);
+        else map.setView([22,10],2);
+        setTimeout(()=>map.invalidateSize(),100);
+      }
+
+      search?.addEventListener('input',renderMap);
+      [statusFilter,carrierSelect,delayFilter].filter(Boolean).forEach(select=>select.addEventListener('change',renderMap));
+      fitButton?.addEventListener('click',()=>{
+        if(bounds.length>=2)map.fitBounds(window.L.latLngBounds(bounds).pad(0.12),{maxZoom:5});
+        else if(bounds.length===1)map.setView(bounds[0],5); else map.setView([22,10],2);
+      });
+      clearButton?.addEventListener('click',()=>{
+        if(search)search.value=''; if(statusFilter)statusFilter.value=''; if(carrierSelect)carrierSelect.value=''; if(delayFilter)delayFilter.value=''; renderMap();
+      });
+      renderMap();
+    } catch (error) {
+      mapElement.innerHTML = `<div class="map-fallback-empty"><strong>Couldn’t load shipment map</strong><span>${esc(error.message || 'Check the connection and retry.')}</span><button type="button" class="btn btn-secondary btn-sm" id="global-map-retry">Try again</button></div>`;
+      summary.textContent='Shipment list and map data could not be loaded.';
+      count.textContent='Map unavailable';
+      mapElement.querySelector('#global-map-retry')?.addEventListener('click',()=>mountGlobalShipmentMap(host));
+    }
+  }
+
   async function renderDashboard(host) {
     const response=await api('/dashboard'); const data=response.data||{}; const stats=data.stats||{};
     const customer=state.user.role==='customer';
@@ -486,8 +745,9 @@
     const adminWidgets=`<div class="grid-3 section-spacer"><section class="panel"><div class="panel-head"><div><h3 class="panel-title">Shipments by status</h3><p class="panel-subtitle">${stats.total_shipments||0} shipments · current lifecycle</p></div></div>${statusChartHtml(byStatus)}</section><section class="panel"><div class="panel-head"><div><h3 class="panel-title">Shipments by carrier</h3><p class="panel-subtitle">All-time volume · ${stats.total_shipments||0} shipments</p></div></div>${carrierChartHtml(byCarrier)}</section>${quickActions}</div><div class="grid-2 section-spacer">${delayedPanel}${exceptionPanel}</div>${recentPanel}`;
     const operatorWidgets=`<div class="grid-2-1 section-spacer">${delayedPanel}${quickActions}</div>${recentPanel}<div class="section-spacer">${exceptionPanel}</div>`;
     const customerWidgets=`${recentPanel}<div class="grid-2 section-spacer">${customerNotifications}${customerAccess}</div>`;
-    host.innerHTML = `${heading(state.user.role==='admin'?'Global operations':state.user.role==='operator'?'Operations':'Customer portal',title,subtitle,action)}${orgAlert}<div class="stats-grid ${customer?'customer-stats':''}">${cards.join('')}</div>${customer?customerWidgets:state.user.role==='operator'?operatorWidgets:adminWidgets}`;
+    host.innerHTML = `${heading(state.user.role==='admin'?'Global operations':state.user.role==='operator'?'Operations':'Customer portal',title,subtitle,action)}${orgAlert}<div class="stats-grid ${customer?'customer-stats':''}">${cards.join('')}</div>${globalMapPanelHtml(customer)}${customer?customerWidgets:state.user.role==='operator'?operatorWidgets:adminWidgets}`;
     bindCommonActions(host);
+    await mountGlobalShipmentMap(host);
   }
   async function customerNotificationPreview(){
     const response=await api('/notifications?per_page=3'); const items=response.data||[];
@@ -633,18 +893,56 @@
   function initMap(s,events){
     const el=document.getElementById('shipment-map'); if(!el || !window.L) return;
     const points=[];
-    const add=(name,lat,lng,type,time,description)=>{if(lat!==null&&lat!==undefined&&lng!==null&&lng!==undefined&&Number.isFinite(Number(lat))&&Number.isFinite(Number(lng)))points.push({name,lat:Number(lat),lng:Number(lng),type,time,description});};
-    add(`${s.origin?.name||'Origin'} · Origin`,s.origin?.latitude,s.origin?.longitude,'Origin',null,'Shipment origin');
-    events.slice().reverse().forEach(e=>add(e.location?.name||e.location?.city||'Recorded checkpoint',e.latitude??e.location?.latitude,e.longitude??e.location?.longitude,'Tracking event',e.event_time,e.description));
-    add(`${s.destination?.name||'Destination'} · Destination`,s.destination?.latitude,s.destination?.longitude,'Destination',null,'Shipment destination');
+    const valid=(lat,lng)=>validMapPair(lat,lng);
+    const add=(name,lat,lng,type,time,description)=>{
+      if(valid(lat,lng))points.push({name,lat:Number(lat),lng:Number(lng),type,time,description});
+    };
+    add(`${s.origin?.city||s.origin?.name||'Origin'} · Origin`,s.origin?.latitude,s.origin?.longitude,'Origin',null,'Shipment origin');
+    const chronological=events.slice().reverse();
+    const trackingPoints=[];
+    chronological.forEach((event,index)=>{
+      const loc=event.location||{};
+      const point={name:loc.city||loc.name||'Recorded checkpoint',lat:event.latitude??loc.latitude,lng:event.longitude??loc.longitude,time:event.event_time,description:event.description};
+      if(valid(point.lat,point.lng)){
+        const type=index===chronological.length-1?'Last checkpoint':'Tracking event';
+        const saved={...point,type,lat:Number(point.lat),lng:Number(point.lng)};
+        trackingPoints.push(saved); points.push(saved);
+      }
+    });
+    add(`${s.destination?.city||s.destination?.name||'Destination'} · Destination`,s.destination?.latitude,s.destination?.longitude,'Destination',null,'Shipment destination');
     if(!points.length)return;
-    const map=window.L.map(el,{scrollWheelZoom:false,zoomControl:true}); state.map=map;
+
+    const map=window.L.map(el,{scrollWheelZoom:false,zoomControl:true,preferCanvas:true}); state.map=map;
     window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
-    const latlngs=[];
-    points.forEach((p,i)=>{const ll=[p.lat,p.lng];latlngs.push(ll);const color=p.type==='Origin'?'#2563EB':p.type==='Destination'?'#142D4E':'#0E9B88';const marker=window.L.circleMarker(ll,{radius:p.type==='Tracking event'?6:8,color:'#fff',weight:2,fillColor:color,fillOpacity:1}).addTo(map);marker.bindPopup(`<strong>${esc(p.name)}</strong><br>${esc(p.type)}${p.time?`<br>${esc(dateFmt(p.time,{time:true}))}`:''}${p.description?`<br>${esc(p.description)}`:''}`);});
-    if(latlngs.length>1)window.L.polyline(latlngs,{color:'#2563EB',weight:3,opacity:.8,dashArray:'7 6'}).addTo(map);
-    map.fitBounds(latlngs,{padding:[24,24],maxZoom:5});
-    setTimeout(()=>map.invalidateSize(),100);
+    const latlngs=points.map(point=>[point.lat,point.lng]);
+    const origin=points.find(point=>point.type==='Origin');
+    const destination=points.find(point=>point.type==='Destination');
+
+    // Solid connectors show the ordered saved checkpoint sequence; dashed line shows the remaining planned connection.
+    const recordedPath=[origin,...trackingPoints].filter(Boolean);
+    const compactRecorded=recordedPath.filter((point,index)=>index===0||!mapPointsEqual(point,recordedPath[index-1]));
+    if(compactRecorded.length>1){
+      window.L.polyline(compactRecorded.map(point=>[point.lat,point.lng]),{color:'#0E9B88',weight:3.5,opacity:.88,lineCap:'round',lineJoin:'round'}).addTo(map);
+    }
+    const lastRecorded=trackingPoints[trackingPoints.length-1]||origin;
+    if(lastRecorded&&destination&&!mapPointsEqual(lastRecorded,destination)){
+      window.L.polyline([[lastRecorded.lat,lastRecorded.lng],[destination.lat,destination.lng]],{color:'#2563EB',weight:3,opacity:.8,dashArray:'7 7',lineCap:'round'}).addTo(map);
+    } else if(!trackingPoints.length&&origin&&destination&&!mapPointsEqual(origin,destination)){
+      window.L.polyline([[origin.lat,origin.lng],[destination.lat,destination.lng]],{color:'#2563EB',weight:3,opacity:.75,dashArray:'7 7',lineCap:'round'}).addTo(map);
+    }
+
+    points.forEach(point=>{
+      const isOrigin=point.type==='Origin',isDestination=point.type==='Destination',isLatest=point.type==='Last checkpoint';
+      const kind=isOrigin?'origin':isDestination?'destination':'checkpoint';
+      const label=isOrigin?'O':isDestination?'D':isLatest?'C':'T';
+      const marker=window.L.marker([point.lat,point.lng],{
+        icon:window.L.divIcon({className:'global-map-leaflet-icon',html:`<span class="global-map-pin global-map-pin-${kind}">${label}</span>`,iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-14]}),
+        title:`${point.type}: ${point.name}`,
+      }).addTo(map);
+      marker.bindPopup(`<strong>${esc(point.name)}</strong><br>${esc(isLatest?'Last saved checkpoint':point.type)}${point.time?`<br>${esc(dateFmt(point.time,{time:true}))}`:''}${point.description?`<br>${esc(point.description)}`:''}`);
+    });
+    map.fitBounds(latlngs,{padding:[28,28],maxZoom:6});
+    setTimeout(()=>map.invalidateSize(),120);
   }
 
   function openDrawer(title,subtitle,bodyHtml,submitHandler,submitLabel='Save changes'){
@@ -768,13 +1066,150 @@
   }
   async function renderNotifications(host){
     const filter=state.filters.notifications||{};const response=await api(`/notifications${queryString({unread:filter.unread?'1':'',per_page:30,page:state.currentPage})}`);const {items,meta}=paginator(response);const unread=items.filter(n=>!n.read_at).length;
-    host.innerHTML=`${heading('Customer portal','Notifications','Important updates for your shipments.',`<button class="btn btn-secondary btn-sm" data-action="mark-all-read">Mark all as read</button>`)}<section class="panel"><div class="panel-head"><div><h3 class="panel-title">Shipment updates</h3><p class="panel-subtitle">${meta.total} notifications · all timestamps UTC</p></div><span class="tiny muted">${state.notificationsUnread} unread</span></div><div class="toolbar"><button class="btn btn-quiet btn-sm" data-notif-tab="all">All updates</button><button class="btn btn-secondary btn-sm" data-notif-tab="unread">Unread</button></div>${items.length?items.map(n=>`<div class="notification-item"><div class="notification-icon">${icon('bell')}</div><div class="notification-main"><strong>${esc(n.title)}</strong><div class="cell-secondary">${n.shipment?.shipment_number?`${esc(n.shipment.shipment_number)} · `:''}${dateFmt(n.created_at,{time:true})}</div><p>${esc(n.message)}</p><div style="display:flex;gap:12px;align-items:center;margin-top:8px">${!n.read_at?`<button class="btn-link" data-action="mark-notification" data-id="${n.id}">Mark as read</button>`:'<span class="tiny muted">Read</span>'}${n.shipment_id?`<button class="btn-link" data-action="notification-shipment" data-id="${n.shipment_id}">View shipment →</button>`:''}</div></div>${!n.read_at?'<span class="unread-dot"></span>':''}</div>`).join(''):`<div class="empty-state"><div class="empty-icon">${icon('bell')}</div><strong>No notifications found</strong><p>Shipment updates will appear here when they are created by operations.</p></div>`}${paginatorHtml(meta,'notifications-page')}</section>`;
+    host.innerHTML=`${heading(state.user.role==='customer'?'Customer portal':'Operations','Notifications','Important updates for your account and booking activity.',`<button class="btn btn-secondary btn-sm" data-action="mark-all-read">Mark all as read</button>`)}<section class="panel"><div class="panel-head"><div><h3 class="panel-title">Shipment updates</h3><p class="panel-subtitle">${meta.total} notifications · all timestamps UTC</p></div><span class="tiny muted">${state.notificationsUnread} unread</span></div><div class="toolbar"><button class="btn btn-quiet btn-sm" data-notif-tab="all">All updates</button><button class="btn btn-secondary btn-sm" data-notif-tab="unread">Unread</button></div>${items.length?items.map(n=>`<div class="notification-item"><div class="notification-icon">${icon('bell')}</div><div class="notification-main"><strong>${esc(n.title)}</strong><div class="cell-secondary">${n.shipment?.shipment_number?`${esc(n.shipment.shipment_number)} · `:''}${dateFmt(n.created_at,{time:true})}</div><p>${esc(n.message)}</p><div style="display:flex;gap:12px;align-items:center;margin-top:8px">${!n.read_at?`<button class="btn-link" data-action="mark-notification" data-id="${n.id}">Mark as read</button>`:'<span class="tiny muted">Read</span>'}${n.shipment_id?`<button class="btn-link" data-action="notification-shipment" data-id="${n.shipment_id}">View shipment →</button>`:''}${n.data?.booking_request_id?`<button class="btn-link" data-action="notification-booking">View booking requests →</button>`:''}</div></div>${!n.read_at?'<span class="unread-dot"></span>':''}</div>`).join(''):`<div class="empty-state"><div class="empty-icon">${icon('bell')}</div><strong>No notifications found</strong><p>Shipment updates will appear here when they are created by operations.</p></div>`}${paginatorHtml(meta,'notifications-page')}</section>`;
     host.querySelector('[data-action="mark-all-read"]')?.addEventListener('click',async()=>{try{await api('/notifications/read-all',{method:'PATCH'});state.notificationsUnread=0;showToast('All notifications marked as read.');await renderPage();}catch(err){showToast(err.message,'error');}});
     host.querySelectorAll('[data-action="mark-notification"]').forEach(b=>b.addEventListener('click',async()=>{try{await api(`/notifications/${b.dataset.id}/read`,{method:'PATCH'});state.notificationsUnread=Math.max(0,state.notificationsUnread-1);await renderPage();}catch(err){showToast(err.message,'error');}}));
     host.querySelectorAll('[data-action="notification-shipment"]').forEach(b=>b.addEventListener('click',()=>viewShipment(b.dataset.id)));
+    host.querySelectorAll('[data-action="notification-booking"]').forEach(b=>b.addEventListener('click',()=>navigate('bookings')));
     host.querySelectorAll('[data-notif-tab]').forEach(b=>b.addEventListener('click',async()=>{state.filters.notifications={unread:b.dataset.notifTab==='unread'};state.currentPage=1;await renderPage();}));
     host.querySelectorAll('[data-action="notifications-page"]').forEach(b=>b.addEventListener('click',async()=>{state.currentPage=Number(b.dataset.page);await renderPage();}));
   }
+  const bookingBadge = (status) => `<span class="booking-status booking-${String(status||'pending_review').toLowerCase()}">${esc(human(status||'PENDING_REVIEW'))}</span>`;
+  const moneyFmt = (amount, currency='IDR') => {
+    try { return new Intl.NumberFormat('id-ID',{style:'currency',currency,maximumFractionDigits:2}).format(Number(amount||0)); }
+    catch { return `${currency} ${fmtNumber(amount)}`; }
+  };
+  const bookingRoute = (b) => `${b?.origin?.city||b?.origin?.name||'Origin'} → ${b?.destination?.city||b?.destination?.name||'Destination'}`;
+
+  async function renderTransport(host){
+    const role=state.user.role;
+    const customer=role==='customer';
+    const admin=role==='admin';
+    if(customer){
+      const res=await api('/customer/transport-journeys');
+      const trips=paginator(res).items;
+      host.innerHTML=`${heading('Layer 3 · Customer portal','Transport journey','View transport trips and the latest available position for shipments assigned to your account.')}<div class="notice"><span class="notice-icon">${icon('info')}</span><div>Position labels distinguish verified provider data, manual updates and stale reports. If no provider position exists, the map will not invent a live location. This view refreshes every 15 seconds when provider data is available.</div></div><section class="panel"><div class="panel-head"><div><h3 class="panel-title">Latest known transport positions</h3><p class="panel-subtitle">Provider reports only · OpenStreetMap</p></div></div><div id="transport-live-map" class="transport-live-map"></div></section><div class="grid-cards">${trips.map(t=>`<section class="panel"><div class="panel-head"><div><h3 class="panel-title">${esc(t.trip_number)}</h3><p class="panel-subtitle">${esc(t.carrier?.name||'Carrier')} · ${esc(t.transport_mode)}</p></div>${statusBadge(t.status)}</div><div class="detail-grid"><div><span class="field-label">Route</span><strong>${esc(t.origin?.name||'Origin')} → ${esc(t.destination?.name||'Destination')}</strong></div><div><span class="field-label">Asset</span><strong>${esc(t.asset?.name||'Not assigned')}</strong></div><div><span class="field-label">Latest position</span><strong>${t.latest_position?`${Number(t.latest_position.latitude).toFixed(5)}, ${Number(t.latest_position.longitude).toFixed(5)}`:'Unavailable'}</strong></div><div><span class="field-label">Source / quality</span><strong>${esc(t.latest_position?.source||'—')} / ${esc(t.latest_position?.quality||'—')}</strong></div></div><div class="panel-foot">${(t.assignments||[]).map(a=>`<span class="chip">${esc(a.shipment?.shipment_number||'Shipment')}</span>`).join('')}</div><div class="table-wrap"><table class="data-table"><thead><tr><th>Observed at (UTC)</th><th>Coordinates</th><th>Source</th><th>Quality</th></tr></thead><tbody>${(t.positions||[]).slice(0,5).map(p=>`<tr><td>${dateFmt(p.observed_at,{year:true})}</td><td>${Number(p.latitude).toFixed(5)}, ${Number(p.longitude).toFixed(5)}</td><td>${esc(p.source)}</td><td>${esc(p.quality)}</td></tr>`).join('')||tableEmpty('No position reports yet.')}</tbody></table></div></section>`).join('')||`<section class="panel empty-state">No transport trips are linked to your shipments yet.</section>`}</div>`;
+      const plotted=trips.filter(t=>t.latest_position && t.latest_position.latitude!==null && t.latest_position.longitude!==null);
+      if(window.L && document.getElementById('transport-live-map')){
+        state.map=L.map('transport-live-map').setView(plotted.length?[Number(plotted[0].latest_position.latitude),Number(plotted[0].latest_position.longitude)]:[20,0],plotted.length?5:2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap contributors'}).addTo(state.map);
+        plotted.forEach(t=>{const p=t.latest_position;L.marker([Number(p.latitude),Number(p.longitude)]).addTo(state.map).bindPopup(`<strong>${esc(t.trip_number)}</strong><br>${esc(t.asset?.name||'Transport asset')}<br>${esc(p.source)} · ${esc(p.quality)}<br>${dateFmt(p.observed_at,{year:true})}`);});
+        if(plotted.length>1)state.map.fitBounds(plotted.map(t=>[Number(t.latest_position.latitude),Number(t.latest_position.longitude)]),{padding:[24,24]});
+      }
+      state.transportRefreshTimer=setTimeout(()=>{if(state.page==='transport'&&state.user?.role==='customer')renderPage();},15000);
+      return;
+    }
+    const [tripRes,assetRes]=await Promise.all([api('/transport-trips?per_page=50'),api('/transport-assets?per_page=100')]);
+    const trips=paginator(tripRes).items, assets=paginator(assetRes).items;
+    let providerItems=[];
+    if(admin){const pr=await api('/tracking-providers');providerItems=pr.data||[];}
+    host.innerHTML=`${heading('Layer 3 · Enterprise transport','Transport & tracking','Manage transport assets, trips, shipment assignments and location reports.',role==='operator'?actionBtn('Create trip','transport-create-trip','plus'):'')}
+      ${admin?`<div class="grid-cards"><section class="panel"><div class="panel-head"><div><h3 class="panel-title">Register transport asset</h3><p class="panel-subtitle">Vessel, truck, aircraft or train.</p></div></div><form id="asset-form" class="form-grid"><div class="form-field"><label>Asset code</label><input name="asset_code" required placeholder="VSL-001"></div><div class="form-field"><label>Name</label><input name="name" required placeholder="MV Cargo Star"></div><div class="form-field"><label>Type</label><select name="asset_type"><option>VESSEL</option><option>TRUCK</option><option>AIRCRAFT</option><option>TRAIN</option></select></div><div class="form-field"><label>Identifier type</label><select name="identifier_type"><option value="">None</option><option>IMO</option><option>MMSI</option><option>REGISTRATION</option><option>ICAO</option><option>DEVICE_ID</option></select></div><div class="form-field"><label>Identifier value</label><input name="identifier_value" placeholder="IMO / MMSI / device ID"></div><div class="form-field"><label>Carrier</label><select name="carrier_id"><option value="">No carrier</option>${(await loadMasterData()).carriers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div><div class="form-field full"><button class="btn" type="submit">Save transport asset</button></div></form></section>
+      <section class="panel"><div class="panel-head"><div><h3 class="panel-title">Tracking provider configuration</h3><p class="panel-subtitle">Credentials are encrypted at rest. Webhook secret is returned only at creation.</p></div></div><form id="provider-form" class="form-grid"><div class="form-field"><label>Provider name</label><input name="name" required placeholder="AIS Provider"></div><div class="form-field"><label>Type</label><select name="provider_type"><option>AIS</option><option>GPS</option><option>CARRIER</option><option>PORT</option><option>CUSTOMS</option></select></div><div class="form-field"><label>Base URL (optional)</label><input name="base_url" type="url" placeholder="https://api.provider.example"></div><div class="form-field"><label>API credential (optional)</label><input name="credential" type="password" autocomplete="off"></div><div class="form-field"><label>Webhook secret (24+ chars)</label><input name="webhook_secret" type="password" minlength="24" autocomplete="new-password"></div><div class="form-field"><label>Stale after (minutes)</label><input name="stale_after_minutes" type="number" min="1" value="30"></div><div class="form-field full"><button class="btn" type="submit">Save provider</button></div></form><p class="tiny muted">Provider API formats differ. This release accepts signed-by-secret webhook payloads; polling adapters require a provider-specific driver.</p></section></div>`:''}
+      ${role==='operator'?`<section class="panel" id="trip-create-panel" hidden><div class="panel-head"><div><h3 class="panel-title">Create transport trip</h3><p class="panel-subtitle">A trip represents one journey or leg.</p></div></div><form id="trip-form" class="form-grid"><div class="form-field"><label>Trip number</label><input name="trip_number" placeholder="Auto-generated if blank"></div><div class="form-field"><label>Carrier</label><select name="carrier_id" required>${(await loadMasterData()).carriers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div><div class="form-field"><label>Asset</label><select name="transport_asset_id"><option value="">Not assigned</option>${assets.map(a=>`<option value="${a.id}">${esc(a.name)} · ${esc(a.asset_code)}</option>`).join('')}</select></div><div class="form-field"><label>Mode</label><select name="transport_mode"><option>SEA</option><option>ROAD</option><option>AIR</option><option>RAIL</option></select></div><div class="form-field"><label>Origin</label><select name="origin_location_id" required>${(await loadMasterData()).locations.map(l=>`<option value="${l.id}">${esc(locationName(l))}</option>`).join('')}</select></div><div class="form-field"><label>Destination</label><select name="destination_location_id" required>${(await loadMasterData()).locations.map(l=>`<option value="${l.id}">${esc(locationName(l))}</option>`).join('')}</select></div><div class="form-field"><label>Scheduled departure (UTC)</label><input name="scheduled_departure_at" type="datetime-local"></div><div class="form-field"><label>Scheduled arrival (UTC)</label><input name="scheduled_arrival_at" type="datetime-local"></div><div class="form-field full"><label>Notes</label><textarea name="notes"></textarea></div><div class="form-field full"><button class="btn" type="submit">Create trip</button></div></form></section>`:''}
+      <section class="panel"><div class="panel-head"><div><h3 class="panel-title">Transport assets</h3><p class="panel-subtitle">${assets.length} registered assets</p></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Asset</th><th>Type</th><th>Identifier</th><th>Carrier</th><th>Status</th></tr></thead><tbody>${assets.map(a=>`<tr><td><strong>${esc(a.name)}</strong><div class="cell-secondary">${esc(a.asset_code)}</div></td><td>${esc(a.asset_type)}</td><td>${esc(a.identifier_type||'—')} ${esc(a.identifier_value||'')}</td><td>${esc(a.carrier?.name||'—')}</td><td>${a.is_active?'Active':'Inactive'}</td></tr>`).join('')||tableEmpty('No transport assets registered.')}</tbody></table></div></section>
+      <section class="panel"><div class="panel-head"><div><h3 class="panel-title">Transport trips</h3><p class="panel-subtitle">${trips.length} trips · latest recorded positions only</p></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Trip</th><th>Carrier / asset</th><th>Route</th><th>Status</th><th>Latest position</th>${role==='operator'?'<th>Actions</th>':''}</tr></thead><tbody>${trips.map(t=>`<tr><td><strong>${esc(t.trip_number)}</strong><div class="cell-secondary">${esc(t.transport_mode)}</div></td><td>${esc(t.carrier?.name||'—')}<div class="cell-secondary">${esc(t.asset?.name||'No asset')}</div></td><td>${esc(t.origin?.city||t.origin?.name||'—')} → ${esc(t.destination?.city||t.destination?.name||'—')}</td><td>${statusBadge(t.status)}</td><td>${t.latest_position?`${Number(t.latest_position.latitude).toFixed(4)}, ${Number(t.latest_position.longitude).toFixed(4)}<div class="cell-secondary">${esc(t.latest_position.source)} · ${esc(t.latest_position.quality)}</div>`:'Unavailable'}</td>${role==='operator'?`<td><div class="table-actions"><button class="btn btn-secondary btn-sm" data-action="trip-position" data-id="${t.id}">Add position</button><button class="btn btn-secondary btn-sm" data-action="trip-assign" data-id="${t.id}">Assign shipment</button></div></td>`:''}</tr>`).join('')||tableEmpty('No transport trips created.')}</tbody></table></div></section>
+      ${admin?`<section class="panel"><div class="panel-head"><div><h3 class="panel-title">Configured providers</h3><p class="panel-subtitle">${providerItems.length} provider configurations</p></div></div>${providerItems.map(p=>`<div class="list-row"><div><strong>${esc(p.name)}</strong><div class="cell-secondary">${esc(p.provider_type)} · ${esc(p.driver)} · stale after ${p.stale_after_minutes} min</div></div>${p.is_active?'<span class="state-badge state-resolved">Active</span>':'<span class="state-badge state-open">Inactive</span>'}</div>`).join('')||'<p class="muted">No providers configured.</p>'}</section>`:''}`;
+    host.querySelector('#asset-form')?.addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget));d.carrier_id=d.carrier_id||null;try{await api('/transport-assets',{method:'POST',body:d});showToast('Transport asset saved.');await renderPage();}catch(err){showToast(err.message,'error');}});
+    host.querySelector('#provider-form')?.addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget));d.is_active=true;d.poll_interval_seconds=300;try{await api('/tracking-providers',{method:'POST',body:d});showToast('Provider configuration saved.');await renderPage();}catch(err){showToast(err.message,'error');}});
+    host.querySelector('[data-action="transport-create-trip"]')?.addEventListener('click',()=>{const panel=host.querySelector('#trip-create-panel');panel.hidden=false;panel.scrollIntoView({behavior:'smooth'});});
+    host.querySelector('#trip-form')?.addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget));d.transport_asset_id=d.transport_asset_id||null;d.scheduled_departure_at=localIso(d.scheduled_departure_at);d.scheduled_arrival_at=localIso(d.scheduled_arrival_at);try{await api('/transport-trips',{method:'POST',body:d});showToast('Transport trip created.');await renderPage();}catch(err){showToast(err.message,'error');}});
+    host.querySelectorAll('[data-action="trip-position"]').forEach(b=>b.addEventListener('click',async()=>{const lat=prompt('Latitude (decimal degrees):');if(lat===null)return;const lon=prompt('Longitude (decimal degrees):');if(lon===null)return;const observed=prompt('Observed at UTC (YYYY-MM-DDTHH:mm:ss)',new Date().toISOString().slice(0,19));if(!observed)return;try{await api(`/transport-trips/${b.dataset.id}/positions`,{method:'POST',body:{latitude:Number(lat),longitude:Number(lon),observed_at:observed}});showToast('Manual position recorded (not live GPS).');await renderPage();}catch(err){showToast(err.message,'error');}}));
+    host.querySelectorAll('[data-action="trip-assign"]').forEach(b=>b.addEventListener('click',async()=>{const shipmentId=prompt('Shipment database ID:');if(!shipmentId)return;const leg=prompt('Leg order (1, 2, ...):','1');if(!leg)return;try{await api(`/transport-trips/${b.dataset.id}/assignments`,{method:'POST',body:{shipment_id:Number(shipmentId),leg_order:Number(leg)}});showToast('Shipment assigned to trip.');await renderPage();}catch(err){showToast(err.message,'error');}}));
+  }
+
+  async function renderBookings(host){
+    const customer=state.user.role==='customer';
+    const filter=state.filters.bookings||{};
+    const response=await api(`/booking-requests${queryString({search:filter.search||'',status:filter.status||'',per_page:20,page:state.currentPage})}`);
+    const {items,meta}=paginator(response);
+    const actionFor=(b)=>{
+      if(customer){
+        if(b.status==='NEEDS_REVISION')return `<button class="btn btn-secondary btn-sm" data-action="booking-revise" data-id="${b.id}">Revise request</button>`;
+        if(b.status==='QUOTED')return `<button class="btn btn-secondary btn-sm" data-action="booking-view-quote" data-id="${b.id}">Review quotation</button>`;
+        if(b.status==='QUOTE_ACCEPTED')return `<button class="btn btn-sm" data-action="booking-payment" data-id="${b.id}">Continue to payment</button>`;
+        if(b.status==='PENDING_PAYMENT')return `<button class="btn btn-sm" data-action="booking-payment" data-id="${b.id}">Open demo checkout</button>`;
+        if(b.status==='READY_FOR_CONVERSION')return `<span class="tiny muted">Waiting for operator</span>`;
+        if(b.status==='CONVERTED'&&b.shipment_id)return `<button class="btn-link" data-action="booking-shipment" data-id="${b.shipment_id}">Shipment ${esc(b.shipment?.shipment_number||'created')} →</button>`;
+        return `<span class="tiny muted">No action required</span>`;
+      }
+      if(['PENDING_REVIEW','NEEDS_REVISION'].includes(b.status))return `<button class="btn btn-secondary btn-sm" data-action="booking-review" data-id="${b.id}">Review request</button>`;
+      if(['APPROVED','QUOTE_DECLINED','QUOTED'].includes(b.status))return `<button class="btn btn-sm" data-action="booking-quote" data-id="${b.id}">${b.status==='QUOTED'?'Refresh quotation':'Prepare quotation'}</button>`;
+      if(b.status==='READY_FOR_CONVERSION')return `<button class="btn btn-sm" data-action="booking-convert" data-id="${b.id}">Create shipment</button>`;
+      if(b.status==='CONVERTED'&&b.shipment_id)return `<button class="btn-link" data-action="booking-shipment" data-id="${b.shipment_id}">Open shipment →</button>`;
+      return `<span class="tiny muted">Waiting for customer</span>`;
+    };
+    host.innerHTML=`${heading(customer?'Customer portal':'Operations',customer?'My Requests':'Booking Requests',customer?'Track your shipment requests, quotations and next steps.':'Review customer requests, prepare quotations and convert paid bookings into shipments.',customer?actionBtn('Request shipment','new-booking','plus'):'')}<section class="panel"><div class="panel-head"><div><h3 class="panel-title">${customer?'Your booking requests':'Booking review queue'}</h3><p class="panel-subtitle">${meta.total} requests · Booking requests are not shipments until converted by an operator.</p></div></div><form id="booking-filter-form" class="toolbar"><div class="searchbox">${icon('search')}<input class="control" name="search" placeholder="Search request, cargo or customer" value="${esc(filter.search||'')}"></div><select class="control" name="status"><option value="">All statuses</option>${['PENDING_REVIEW','NEEDS_REVISION','APPROVED','QUOTED','QUOTE_ACCEPTED','QUOTE_DECLINED','PENDING_PAYMENT','READY_FOR_CONVERSION','REJECTED','CANCELLED','CONVERTED'].map(x=>`<option value="${x}" ${filter.status===x?'selected':''}>${human(x)}</option>`).join('')}</select><button class="btn btn-secondary btn-sm" type="submit">${icon('filter')} Filter</button><button class="btn btn-quiet btn-sm" type="button" id="clear-booking-filter">Clear</button></form><div class="table-wrap"><table class="data-table"><thead><tr><th>Request</th>${customer?'':'<th>Customer</th>'}<th>Route / cargo</th><th>Submitted</th><th>Status</th><th>Latest quotation</th><th>Action</th></tr></thead><tbody>${items.map(b=>`<tr><td><div class="cell-primary">${esc(b.request_number)}</div><div class="cell-secondary">${fmtNumber(b.package_count)} packages</div></td>${customer?'':`<td><div class="strong">${esc(b.customer?.name||'Customer')}</div><div class="cell-secondary">${esc(b.customer?.email||'')}</div></td>`}<td><div class="strong">${esc(bookingRoute(b))}</div><div class="cell-secondary">${esc(b.cargo_type||'Cargo')}</div></td><td>${dateFmt(b.submitted_at||b.created_at,{time:false,zone:false})}</td><td>${bookingBadge(b.status)}</td><td>${b.latest_quotation?`<div class="strong">${esc(moneyFmt(b.latest_quotation.amount,b.latest_quotation.currency))}</div><div class="cell-secondary">${esc(b.latest_quotation.carrier?.name||'Carrier pending')}</div>`:'<span class="muted">Not prepared</span>'}</td><td><div class="table-actions">${actionFor(b)}</div></td></tr>`).join('')||tableEmpty(customer?'No booking requests yet.':'No requests need attention.')}</tbody></table></div>${paginatorHtml(meta,'bookings-page')}</section>`;
+    host.querySelector('#booking-filter-form')?.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.currentTarget);state.filters.bookings={search:f.get('search'),status:f.get('status')};state.currentPage=1;await renderPage();});
+    host.querySelector('#clear-booking-filter')?.addEventListener('click',async()=>{state.filters.bookings={};state.currentPage=1;await renderPage();});
+    host.querySelector('[data-action="new-booking"]')?.addEventListener('click',()=>{state.selectedBooking=null;navigate('request-booking');});
+    host.querySelectorAll('[data-action="booking-review"]').forEach(b=>b.addEventListener('click',()=>openBookingReviewDrawer(items.find(x=>String(x.id)===b.dataset.id))));
+    host.querySelectorAll('[data-action="booking-quote"]').forEach(b=>b.addEventListener('click',()=>openBookingQuotationDrawer(items.find(x=>String(x.id)===b.dataset.id))));
+    host.querySelectorAll('[data-action="booking-view-quote"]').forEach(b=>b.addEventListener('click',()=>openCustomerQuotationDrawer(items.find(x=>String(x.id)===b.dataset.id))));
+    host.querySelectorAll('[data-action="booking-payment"]').forEach(b=>b.addEventListener('click',()=>startBookingPayment(items.find(x=>String(x.id)===b.dataset.id))));
+    host.querySelectorAll('[data-action="booking-revise"]').forEach(b=>b.addEventListener('click',()=>{state.selectedBooking=items.find(x=>String(x.id)===b.dataset.id);navigate('request-booking');}));
+    host.querySelectorAll('[data-action="booking-convert"]').forEach(b=>b.addEventListener('click',()=>convertBooking(b.dataset.id)));
+    host.querySelectorAll('[data-action="booking-shipment"]').forEach(b=>b.addEventListener('click',()=>viewShipment(b.dataset.id)));
+    host.querySelectorAll('[data-action="bookings-page"]').forEach(b=>b.addEventListener('click',async()=>{state.currentPage=Number(b.dataset.page);await renderPage();}));
+  }
+
+  async function renderRequestBooking(host){
+    const editing=state.selectedBooking;
+    if(editing&&editing.status!=='NEEDS_REVISION'){state.selectedBooking=null;return navigate('bookings',false);}
+    const master=await loadMasterData();
+    const locations=master.locations||[];
+    host.innerHTML=`${heading('Customer portal',editing?'Revise shipment request':'Request a shipment',editing?'Update the information requested by the operator.':'Tell the operations team about the cargo and route you need.',`<button class="btn btn-secondary" data-action="back-bookings">${icon('back')} My requests</button>`)}<div class="notice"><span class="notice-icon">${icon('info')}</span><div>This form creates a booking request, not a confirmed shipment. An operator will review the details and prepare a quotation before a shipment number is assigned.</div></div><form id="booking-request-form" class="panel booking-form"><div class="panel-head"><div><h3 class="panel-title">Shipment details</h3><p class="panel-subtitle">Fields marked * are required.</p></div></div><div class="form-grid"><div class="form-field"><label>Origin <span class="req">*</span></label><select name="origin_location_id" required><option value="">Choose origin</option>${locations.map(l=>locationOption(l)).join('')}</select></div><div class="form-field"><label>Destination <span class="req">*</span></label><select name="destination_location_id" required><option value="">Choose destination</option>${locations.map(l=>locationOption(l)).join('')}</select></div><div class="form-field"><label>Cargo type <span class="req">*</span></label><input name="cargo_type" required maxlength="120" value="${esc(editing?.cargo_type||'')}" placeholder="e.g. General cargo"></div><div class="form-field"><label>Number of packages <span class="req">*</span></label><input name="package_count" type="number" min="1" required value="${esc(editing?.package_count||1)}"></div><div class="form-field"><label>Total weight <span class="req">*</span></label><div class="form-grid"><input name="total_weight" type="number" min="0.001" step="0.001" required value="${esc(editing?.total_weight||'')}" placeholder="Weight"><select name="weight_unit"><option>KG</option><option ${editing?.weight_unit==='TON'?'selected':''}>TON</option></select></div></div><div class="form-field"><label>Total volume</label><div class="form-grid"><input name="total_volume" type="number" min="0.001" step="0.001" value="${esc(editing?.total_volume||'')}" placeholder="Volume"><select name="volume_unit"><option>CBM</option><option ${editing?.volume_unit==='M3'?'selected':''}>M3</option></select></div></div><div class="form-field"><label>Desired departure · UTC</label><input name="desired_departure_at" type="datetime-local" value="${inputDate(editing?.desired_departure_at)}"></div><div class="form-field"><label>Desired arrival · UTC</label><input name="desired_arrival_at" type="datetime-local" value="${inputDate(editing?.desired_arrival_at)}"></div><div class="form-field full"><label>Cargo description</label><textarea name="cargo_description" maxlength="3000" placeholder="Describe the cargo, handling needs or packaging.">${esc(editing?.cargo_description||'')}</textarea></div><div class="form-field full"><label>Notes for operations</label><textarea name="customer_notes" maxlength="3000" placeholder="Additional instructions or preferred schedule.">${esc(editing?.customer_notes||'')}</textarea></div><div class="form-field"><label>Item name <span class="req">*</span></label><input name="item_name" required value="${esc(editing?.items?.[0]?.item_name||editing?.cargo_type||'')}" placeholder="Main item"></div><div class="form-field"><label>Item quantity <span class="req">*</span></label><input name="item_quantity" type="number" min="1" required value="${esc(editing?.items?.[0]?.quantity||1)}"></div></div><div class="form-actions"><button class="btn btn-secondary" type="button" data-action="back-bookings">Cancel</button><button class="btn" type="submit">${editing?'Send revised request':'Submit request'} ${icon('arrow')}</button></div></form>`;
+    if(editing){const form=host.querySelector('#booking-request-form');form.elements.origin_location_id.value=String(editing.origin_location_id);form.elements.destination_location_id.value=String(editing.destination_location_id);}
+    host.querySelectorAll('[data-action="back-bookings"]').forEach(b=>b.addEventListener('click',()=>{state.selectedBooking=null;navigate('bookings');}));
+    host.querySelector('#booking-request-form')?.addEventListener('submit',async e=>{
+      e.preventDefault();const f=new FormData(e.currentTarget);
+      const body={origin_location_id:Number(f.get('origin_location_id')),destination_location_id:Number(f.get('destination_location_id')),desired_departure_at:f.get('desired_departure_at')?localIso(f.get('desired_departure_at')):null,desired_arrival_at:f.get('desired_arrival_at')?localIso(f.get('desired_arrival_at')):null,cargo_type:f.get('cargo_type').trim(),cargo_description:f.get('cargo_description')||null,package_count:Number(f.get('package_count')),total_weight:Number(f.get('total_weight')),weight_unit:f.get('weight_unit'),total_volume:f.get('total_volume')?Number(f.get('total_volume')):null,volume_unit:f.get('volume_unit')||'CBM',customer_notes:f.get('customer_notes')||null,items:[{item_name:f.get('item_name').trim(),quantity:Number(f.get('item_quantity')),description:f.get('cargo_description')||null,weight_unit:f.get('weight_unit'),volume_unit:f.get('volume_unit')||'CBM'}]};
+      try{await api(editing?`/booking-requests/${editing.id}`:'/booking-requests',{method:editing?'PATCH':'POST',body});state.selectedBooking=null;showToast(editing?'Revised request submitted.':'Booking request submitted.');await navigate('bookings');}catch(err){showToast(err.message,'error');}
+    });
+  }
+
+  function openBookingReviewDrawer(booking){
+    if(!booking)return;
+    openDrawer('Review booking request',`${booking.request_number} · ${booking.customer?.name||'Customer'} · ${bookingRoute(booking)}`,`<div class="info-list"><div class="info-row"><span>Cargo</span><strong>${esc(booking.cargo_type)}</strong></div><div class="info-row"><span>Packages</span><strong>${fmtNumber(booking.package_count)}</strong></div><div class="info-row"><span>Weight / volume</span><strong>${esc(booking.total_weight)} ${esc(booking.weight_unit)} · ${esc(booking.total_volume||'—')} ${esc(booking.volume_unit||'')}</strong></div><div class="info-row"><span>Desired departure</span><strong>${dateFmt(booking.desired_departure_at,{time:true})}</strong></div></div><div class="form-field" style="margin-top:15px"><label>Decision <span class="req">*</span></label><select name="decision"><option value="approve">Approve request</option><option value="request_revision">Request revision</option><option value="reject">Reject request</option></select></div><div class="form-field"><label>Operator note <span class="req">*</span> for revision/rejection</label><textarea name="note" placeholder="Explain the decision or information needed."></textarea></div>`,async f=>{await api(`/booking-requests/${booking.id}/review`,{method:'POST',body:{decision:f.get('decision'),note:f.get('note')||null}});closeDrawer();showToast('Booking decision saved.');await renderPage();},'Save decision');
+  }
+
+  async function openBookingQuotationDrawer(booking){
+    if(!booking)return;
+    const carriers=(await api('/carriers?per_page=100')).data||[];const active=carriers.filter(c=>c.is_active);
+    if(!active.length){showToast('Tambahkan carrier aktif sebelum membuat penawaran.','error');return;}
+    openDrawer('Prepare quotation',`${booking.request_number} · ${bookingRoute(booking)}`,`<div class="notice"><span class="notice-icon">${icon('info')}</span><div>Pilih carrier dan jadwal yang menjadi dasar penawaran biaya. Customer akan menerima penawaran ini untuk disetujui.</div></div><div class="form-field"><label>Carrier <span class="req">*</span></label><select name="carrier_id" required>${active.map(c=>`<option value="${c.id}">${esc(c.name)} · ${esc(c.transport_mode||'Mode n/a')}</option>`).join('')}</select></div><div class="form-grid"><div class="form-field"><label>Quoted amount <span class="req">*</span></label><input name="amount" type="number" min="1" step="0.01" required placeholder="e.g. 2500000"></div><div class="form-field"><label>Currency</label><select name="currency"><option>IDR</option><option>USD</option><option>SGD</option></select></div></div><div class="form-grid"><div class="form-field"><label>Expected departure · UTC <span class="req">*</span></label><input name="expected_departure_at" type="datetime-local" required value="${inputDate(booking.desired_departure_at)}"></div><div class="form-field"><label>Expected arrival · UTC <span class="req">*</span></label><input name="expected_arrival_at" type="datetime-local" required value="${inputDate(booking.desired_arrival_at)}"></div></div><div class="form-field"><label>Quotation valid until · UTC</label><input name="valid_until" type="datetime-local" value="${inputDate(new Date(Date.now()+3*86400000).toISOString())}"></div><div class="form-field"><label>Terms and service notes</label><textarea name="terms" placeholder="Service level, included services, exclusions or payment instructions."></textarea></div>`,async f=>{await api(`/booking-requests/${booking.id}/quotation`,{method:'POST',body:{carrier_id:Number(f.get('carrier_id')),amount:Number(f.get('amount')),currency:f.get('currency'),expected_departure_at:localIso(f.get('expected_departure_at')),expected_arrival_at:localIso(f.get('expected_arrival_at')),valid_until:f.get('valid_until')?localIso(f.get('valid_until')):null,terms:f.get('terms')||null}});closeDrawer();showToast('Quotation sent to customer.');await renderPage();},'Send quotation');
+  }
+
+  function openCustomerQuotationDrawer(booking){
+    const q=booking?.latest_quotation;if(!q)return showToast('No quotation is available.','error');
+    openDrawer('Review quotation',`${booking.request_number} · ${q.carrier?.name||'Carrier'}`,`<div class="booking-quote-total">${esc(moneyFmt(q.amount,q.currency))}</div><div class="info-list"><div class="info-row"><span>Carrier</span><strong>${esc(q.carrier?.name||'—')}</strong></div><div class="info-row"><span>Expected departure</span><strong>${dateFmt(q.expected_departure_at,{time:true})}</strong></div><div class="info-row"><span>Expected arrival</span><strong>${dateFmt(q.expected_arrival_at,{time:true})}</strong></div><div class="info-row"><span>Valid until</span><strong>${dateFmt(q.valid_until,{time:true})}</strong></div></div><div class="notice" style="margin-top:14px"><span class="notice-icon">${icon('info')}</span><div>${esc(q.terms||'Review the service and schedule before accepting this quotation.')}</div></div><div class="form-field" style="margin-top:14px"><label>Action</label><select name="decision"><option value="accept">Accept quotation</option><option value="decline">Decline quotation</option></select></div><div class="form-field"><label>Note (optional)</label><textarea name="note" placeholder="Optional response to the operator."></textarea></div>`,async f=>{const accept=f.get('decision')==='accept';await api(`/booking-requests/${booking.id}/quotation/${accept?'accept':'decline'}`,{method:'POST',body:{note:f.get('note')||null}});closeDrawer();showToast(accept?'Quotation accepted.':'Quotation declined.');await renderPage();},'Confirm decision');
+  }
+
+  async function startBookingPayment(booking){
+    if(!booking)return;
+    try{
+      let payment=booking.latest_payment;
+      let checkoutUrl=null;
+      if(!payment||payment.status!=='PENDING'){
+        const response=await api(`/booking-requests/${booking.id}/payments`,{method:'POST',body:{}});
+        payment=response.data; checkoutUrl=response.checkout_url||null;
+      } else if(payment.provider==='midtrans') {
+        checkoutUrl=payment.provider_data?.redirect_url||null;
+      }
+      if(payment.provider==='midtrans'){
+        if(!checkoutUrl)throw new Error('Checkout URL payment gateway belum tersedia. Hubungi operator.');
+        window.location.assign(checkoutUrl);
+        return;
+      }
+      openDrawer('Demo payment checkout',`${booking.request_number} · ${payment.provider_reference}`,`<div class="booking-quote-total">${esc(moneyFmt(payment.amount,payment.currency))}</div><div class="notice notice-warning"><span class="notice-icon">${icon('info')}</span><div><strong>DEMO ONLY — no real money will be charged.</strong><br>This local checkout simulates a successful payment so the booking workflow can be tested. It is not connected to a bank, card network or live payment gateway.</div></div><div class="info-list"><div class="info-row"><span>Payment reference</span><strong>${esc(payment.provider_reference)}</strong></div><div class="info-row"><span>Expires</span><strong>${dateFmt(payment.expires_at,{time:true})}</strong></div><div class="info-row"><span>Status</span><strong>${esc(payment.status)}</strong></div></div>`,async()=>{await api(`/booking-payments/${payment.id}/demo-confirm`,{method:'POST',body:{}});closeDrawer();showToast('Demo payment confirmed. Operator can now create the shipment.');await renderPage();},'Confirm demo payment');
+    }catch(err){showToast(err.message,'error');}
+  }
+
+  async function convertBooking(id){
+    if(!confirm('Create a shipment from this approved booking? A unique shipment number will be generated.'))return;
+    try{const response=await api(`/booking-requests/${id}/convert`,{method:'POST',body:{}});showToast(`Shipment ${response.data.shipment_number} created.`);await renderPage();}catch(err){showToast(err.message,'error');}
+  }
+
   function renderProfile(host){
     host.innerHTML=`${heading('Customer portal','Profile & preferences','Your account information and access scope are managed by your administrator.')}
       <div class="grid-2-1"><section class="panel"><div class="panel-head"><div><h3 class="panel-title">Personal information</h3><p class="panel-subtitle">Your account contact details</p></div></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:20px"><div class="avatar" style="height:48px;width:48px;font-size:14px">${esc(initial(state.user.name))}</div><div><div class="strong">${esc(state.user.name)}</div>${roleBadge(state.user.role)}</div></div><div class="info-list"><div class="info-row"><span>Full name</span><strong>${esc(state.user.name)}</strong></div><div class="info-row"><span>Email address</span><strong>${esc(state.user.email)}</strong></div><div class="info-row"><span>Role</span><strong>Customer</strong></div><div class="info-row"><span>Account since</span><strong>${dateFmt(state.user.created_at,{time:false,zone:false})}</strong></div></div><div class="notice" style="margin-top:18px"><span class="notice-icon">${icon('info')}</span><div>Profile editing and password change are not exposed by the current backend API. Contact your administrator to verify account changes.</div></div></section>

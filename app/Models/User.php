@@ -34,6 +34,8 @@ class User extends Authenticatable
     public function isCustomer(): bool { return $this->role === self::ROLE_CUSTOMER; }
 
     public function customerShipments() { return $this->hasMany(Shipment::class, 'customer_id'); }
+    public function bookingRequests() { return $this->hasMany(BookingRequest::class, 'customer_id'); }
+    public function reviewedBookingRequests() { return $this->hasMany(BookingRequest::class, 'reviewed_by'); }
     public function createdShipments() { return $this->hasMany(Shipment::class, 'created_by'); }
     public function trackingEvents() { return $this->hasMany(TrackingEvent::class, 'created_by'); }
     public function reportedExceptions() { return $this->hasMany(ShipmentException::class, 'reported_by'); }

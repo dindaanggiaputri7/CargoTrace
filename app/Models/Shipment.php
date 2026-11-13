@@ -49,6 +49,7 @@ class Shipment extends Model
     public function latestTrackingEvent() { return $this->hasOne(TrackingEvent::class)->latestOfMany('event_time'); }
     public function exceptions() { return $this->hasMany(ShipmentException::class); }
     public function notifications() { return $this->hasMany(Notification::class); }
+    public function transportAssignments() { return $this->hasMany(ShipmentTripAssignment::class)->orderBy('leg_order'); }
 
     public function effectiveEta()
     {
