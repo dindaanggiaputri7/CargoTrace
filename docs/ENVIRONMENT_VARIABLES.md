@@ -14,11 +14,13 @@ The selected Nominatim endpoint does not require a secret API key. Use a clear U
 ## Layer 2 optional configuration
 
 ```dotenv
-# Local/testing only; backend additionally blocks mock confirmation outside local/testing.
-CARGOTRACE_ALLOW_DEMO_PAYMENTS=true
+# Midtrans Sandbox credentials; never place these in GitHub or a shared ZIP.
+MIDTRANS_SERVER_KEY=your-sandbox-server-key
+MIDTRANS_CLIENT_KEY=your-sandbox-client-key
+MIDTRANS_IS_PRODUCTION=false
 
 # Optional outbound email. Configure a real SMTP/Mail provider before setting true.
 CARGOTRACE_EMAIL_NOTIFICATIONS=false
 ```
 
-The mock checkout is for workflow testing only. It is not a payment gateway integration and must not be used to collect real customer funds.
+No mock payment confirmation exists. The application refuses to create a payment intent unless `MIDTRANS_SERVER_KEY` is configured. Only a verified Midtrans webhook can mark a payment as `PAID`. Run `php artisan schedule:work` locally to execute the 24-hour expiry job every minute.

@@ -22,7 +22,7 @@ class CustomerDirectoryTest extends TestCase
         ]);
     }
 
-    public function test_operator_can_read_active_customers_without_user_management_access(): void
+    public function test_operator_can_read_customer_directory_without_user_management_access(): void
     {
         $operator = $this->user(User::ROLE_OPERATOR, 'operator-directory@cargotrace.test');
         $activeCustomer = $this->user(User::ROLE_CUSTOMER, 'active-directory@cargotrace.test');
@@ -32,7 +32,7 @@ class CustomerDirectoryTest extends TestCase
         $this->getJson('/api/customers')
             ->assertOk()
             ->assertJsonFragment(['email' => $activeCustomer->email])
-            ->assertJsonMissing(['email' => 'inactive-directory@cargotrace.test']);
+            ->assertJsonFragment(['email' => 'inactive-directory@cargotrace.test']);
 
         $this->getJson('/api/users')->assertForbidden();
     }

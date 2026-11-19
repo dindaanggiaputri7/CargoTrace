@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Customer;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -20,7 +22,11 @@ class AuthController extends Controller
 
         // Public registration can create CUSTOMER accounts only.
         $data['email'] = strtolower($data['email']);
-        $user = User::create($data + ['role' => User::ROLE_CUSTOMER, 'is_active' => true]);
+        $user = DB::transaction(function () use ($data) {
+            $user = User::create($data + ['role' => User::ROLE_CUSTOMER, 'is_active' => true]);
+            Customer::create(['user_id' => $user->id, 'name' => $user->name, 'email' => $user->email]);
+            return $user;
+        });
         $token = $user->createToken('cargotrace-client')->plainTextToken;
 
         return response()->json(['message' => 'Registrasi berhasil.', 'user' => $user, 'token' => $token], 201);

@@ -14,52 +14,6 @@ use Illuminate\Validation\ValidationException;
 
 class BookingPaymentController extends Controller
 {
-    public function demoConfirm(Request $request, BookingPayment $payment, BookingCommunicationService $communication, AuditService $audit)
-    {
-        // The demo payment simulator is deliberately unavailable in production.
-        abort_unless(app()->environment(['local', 'testing']) && config('cargotrace.allow_demo_payments'), 404);
-        abort_unless($request->user()->isCustomer() && (int) $payment->customer_id === (int) $request->user()->id, 404);
-
-        $booking = DB::transaction(function () use ($payment, $request, $communication, $audit) {
-            $lockedPayment = BookingPayment::query()->lockForUpdate()->findOrFail($payment->id);
-            if ($lockedPayment->provider !== 'mock') {
-                throw ValidationException::withMessages(['payment' => ['Payment demo hanya berlaku untuk transaksi simulasi.']]);
-            }
-            if ($lockedPayment->status === 'PAID') return BookingRequest::findOrFail($lockedPayment->booking_request_id);
-            if ($lockedPayment->status !== 'PENDING' || ($lockedPayment->expires_at && $lockedPayment->expires_at->isPast())) {
-                throw ValidationException::withMessages(['payment' => ['Pembayaran tidak lagi dapat dikonfirmasi.']]);
-            }
-
-            $lockedPayment->update([
-                'status' => 'PAID',
-                'paid_at' => now(),
-                'provider_data' => array_merge($lockedPayment->provider_data ?? [], ['confirmed_in_demo' => true, 'confirmed_at' => now()->toIso8601String()]),
-            ]);
-            $booking = BookingRequest::query()->lockForUpdate()->findOrFail($lockedPayment->booking_request_id);
-            $from = $booking->status;
-            if ($from !== 'PENDING_PAYMENT') {
-                throw ValidationException::withMessages(['booking' => ['Status permintaan tidak sesuai untuk konfirmasi pembayaran.']]);
-            }
-            $booking->update(['status' => 'READY_FOR_CONVERSION']);
-            BookingRequestHistory::create([
-                'booking_request_id' => $booking->id,
-                'actor_id' => $request->user()->id,
-                'from_status' => $from,
-                'to_status' => 'READY_FOR_CONVERSION',
-                'note' => 'Pembayaran demo dikonfirmasi; tidak ada dana sungguhan yang diproses.',
-                'created_at' => now(),
-            ]);
-            $audit->record($request->user(), 'BOOKING_DEMO_PAYMENT_CONFIRMED', 'BookingPayment', $lockedPayment->id,
-                'Pembayaran demo untuk '.$booking->request_number.' dikonfirmasi.', ['status' => 'PENDING'], ['status' => 'PAID']);
-            $communication->notify($booking->customer, 'PAYMENT_PAID', 'Pembayaran tercatat (DEMO)',
-                'Pembayaran simulasi untuk '.$booking->request_number.' berhasil. Tidak ada uang sungguhan yang ditagihkan.', $booking);
-            $communication->notifyOperators('BOOKING_READY_FOR_CONVERSION', 'Booking siap dikonversi',
-                'Pembayaran demo untuk '.$booking->request_number.' tercatat; operator dapat membuat shipment.', $booking);
-            return $booking;
-        });
-
-        return response()->json(['message' => 'Pembayaran DEMO dikonfirmasi. Tidak ada dana sungguhan yang diproses.', 'data' => $booking->load('latestQuotation', 'latestPayment')]);
-    }
     /**
      * Midtrans server-to-server notification. Signature is verified before any state change.
      * Configure the notification URL as /api/integrations/payments/midtrans/notification.
@@ -74,7 +28,7 @@ class BookingPaymentController extends Controller
             'transaction_status' => ['required','string','max:30'],
             'fraud_status' => ['nullable','string','max:30'],
         ]);
-        $serverKey = (string) config('services.midtrans.server_key');
+        $serverKey = trim((string) config('services.midtrans.server_key'));
         abort_unless($serverKey !== '', 503, 'Payment provider is not configured.');
         $expected = hash('sha512', $data['order_id'].$data['status_code'].$data['gross_amount'].$serverKey);
         abort_unless(hash_equals($expected, $data['signature_key']), 401, 'Invalid payment notification signature.');
@@ -83,6 +37,8 @@ class BookingPaymentController extends Controller
             ->where('provider_reference', $data['order_id'])->firstOrFail();
 
         DB::transaction(function () use ($payment, $data, $communication, $audit) {
+            // All payment flows lock BookingRequest before BookingPayment to avoid lock-order deadlocks.
+            $booking = BookingRequest::query()->lockForUpdate()->findOrFail($payment->booking_request_id);
             $locked = BookingPayment::query()->lockForUpdate()->findOrFail($payment->id);
             if ($locked->status === 'PAID') return;
             if (number_format((float)$locked->amount, 2, '.', '') !== number_format((float)$data['gross_amount'], 2, '.', '')) {
@@ -100,6 +56,16 @@ class BookingPaymentController extends Controller
                 $newStatus = 'EXPIRED';
             }
 
+            // Late PENDING notifications must never revive a transaction already marked FAILED/EXPIRED.
+            if (in_array($locked->status, ['FAILED', 'EXPIRED'], true) && $newStatus === 'PENDING') {
+                return;
+            }
+            // Repeated gateway notifications for the same state are idempotent.
+            if ($locked->status === $newStatus) {
+                return;
+            }
+
+            $previousPaymentStatus = $locked->status;
             $locked->update([
                 'status' => $newStatus,
                 'paid_at' => $newStatus === 'PAID' ? now() : $locked->paid_at,
@@ -110,18 +76,18 @@ class BookingPaymentController extends Controller
                 ]),
             ]);
 
-            $booking = BookingRequest::query()->lockForUpdate()->findOrFail($locked->booking_request_id);
-            if ($newStatus === 'PAID' && $booking->status === 'PENDING_PAYMENT') {
+            if ($newStatus === 'PAID' && in_array($booking->status, ['PENDING_PAYMENT', 'QUOTE_ACCEPTED'], true)) {
+                $fromBookingStatus = $booking->status;
                 $booking->update(['status' => 'READY_FOR_CONVERSION']);
                 BookingRequestHistory::create([
                     'booking_request_id' => $booking->id, 'actor_id' => null,
-                    'from_status' => 'PENDING_PAYMENT', 'to_status' => 'READY_FOR_CONVERSION',
+                    'from_status' => $fromBookingStatus, 'to_status' => 'READY_FOR_CONVERSION',
                     'note' => 'Pembayaran dikonfirmasi melalui notifikasi server-to-server Midtrans.',
                     'created_at' => now(),
                 ]);
                 $audit->record(null, 'BOOKING_PAYMENT_CONFIRMED', 'BookingPayment', $locked->id,
                     'Payment gateway mengonfirmasi pembayaran untuk '.$booking->request_number.'.',
-                    ['status' => 'PENDING'], ['status' => 'PAID']);
+                    ['status' => $previousPaymentStatus], ['status' => 'PAID']);
                 $communication->notify($booking->customer, 'PAYMENT_PAID', 'Pembayaran berhasil',
                     'Pembayaran untuk '.$booking->request_number.' telah dikonfirmasi oleh payment gateway.', $booking);
                 $communication->notifyOperators('BOOKING_READY_FOR_CONVERSION', 'Booking siap dikonversi',
@@ -129,7 +95,18 @@ class BookingPaymentController extends Controller
             } elseif (in_array($newStatus, ['FAILED','EXPIRED'], true)) {
                 $audit->record(null, 'BOOKING_PAYMENT_'.$newStatus, 'BookingPayment', $locked->id,
                     'Status pembayaran gateway berubah menjadi '.$newStatus.'.',
-                    ['status' => 'PENDING'], ['status' => $newStatus]);
+                    ['status' => $previousPaymentStatus], ['status' => $newStatus]);
+                if ($booking->status === 'PENDING_PAYMENT' && !$booking->payments()->where('status', 'PAID')->exists()) {
+                    $booking->update(['status' => 'QUOTE_ACCEPTED']);
+                    BookingRequestHistory::create([
+                        'booking_request_id' => $booking->id, 'actor_id' => null,
+                        'from_status' => 'PENDING_PAYMENT', 'to_status' => 'QUOTE_ACCEPTED',
+                        'note' => 'Pembayaran tidak berhasil atau telah kedaluwarsa; customer dapat mencoba kembali.',
+                        'created_at' => now(),
+                    ]);
+                    $communication->notify($booking->customer, 'PAYMENT_'.$newStatus, 'Pembayaran belum berhasil',
+                        'Pembayaran untuk '.$booking->request_number.' berstatus '.$newStatus.'. Anda dapat mencoba kembali dari CargoTrace.', $booking);
+                }
             }
         });
 

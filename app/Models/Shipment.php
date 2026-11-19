@@ -15,7 +15,7 @@ class Shipment extends Model
     public const ACTIVE_STATUSES = ['CREATED', 'BOOKED', 'PICKED_UP', 'IN_TRANSIT'];
 
     protected $fillable = [
-        'shipment_number', 'customer_reference', 'customer_id', 'created_by', 'carrier_id',
+        'shipment_number', 'customer_reference', 'customer_id', 'customer_record_id', 'source_type', 'created_by', 'carrier_id',
         'origin_location_id', 'destination_location_id', 'cargo_type', 'cargo_description',
         'package_count', 'total_weight', 'weight_unit', 'total_volume', 'volume_unit',
         'expected_departure_at', 'expected_arrival_at', 'current_eta', 'status',
@@ -40,6 +40,7 @@ class Shipment extends Model
     }
 
     public function customer() { return $this->belongsTo(User::class, 'customer_id'); }
+    public function customerRecord() { return $this->belongsTo(Customer::class, 'customer_record_id'); }
     public function creator() { return $this->belongsTo(User::class, 'created_by'); }
     public function carrier() { return $this->belongsTo(Carrier::class); }
     public function origin() { return $this->belongsTo(Location::class, 'origin_location_id'); }

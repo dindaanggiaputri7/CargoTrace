@@ -38,7 +38,7 @@ The feature suite verifies core backend behavior, but it is not a substitute for
 | Customer submits request | `BookingRequestController@store` | `BookingWorkflowTest::test_customer_can_submit_booking_request_and_operator_can_review_it` |
 | Customer ownership | `BookingRequestController@show`, customer query scope | `BookingWorkflowTest::test_customer_cannot_view_another_customers_booking_request` |
 | Operator review and quotation | `review`, `createQuotation`, `acceptQuotation` | Covered by the end-to-end booking workflow test |
-| Payment demo gating | `createPaymentIntent`, `BookingPaymentController@demoConfirm` | Covered by end-to-end workflow test; live provider not implemented |
+| Payment verification and expiry | `createPaymentIntent`, `BookingPaymentController@midtransNotification`, `ExpireBookingPayments` | Tests cover refusal without gateway, signed webhook settlement, and late PENDING notification protection; run scheduler + Midtrans Sandbox manually |
 | Convert request to shipment | `convertToShipment` | Test checks shipment, initial tracking event, linked request, and idempotent retry |
 | Regression | Existing Layer 1 endpoints/services | Run the full `php artisan test` suite after applying migrations |
 
@@ -59,3 +59,15 @@ The feature suite verifies core backend behavior, but it is not a substitute for
 | Microservices deployment | Not implemented | Current design is modular Laravel monolith; extraction requires infrastructure |
 
 Run `php artisan test` after installing dependencies and applying migrations. Run provider tests only against sandbox credentials and a controlled webhook tunnel. Do not expose live credentials in screenshots, Git commits, or ZIP archives.
+
+
+### Free-text tracking checkpoints
+
+- As Operator, search for a place not present in Admin Locations (for example, `Tanjung Pinang, Kepulauan Riau`).
+- Select the correct geocoding suggestion and confirm latitude/longitude are filled.
+- Save an event with a carrier-confirmed description and event time.
+- Confirm the event appears in the append-only timeline and as a checkpoint marker on the shipment map.
+- Confirm Admin Locations count is unchanged: a free-text checkpoint is stored on the tracking event metadata, not as a master location.
+- Confirm Customer cannot call the Operator-only tracking geocoding endpoint.
+- Confirm invalid or future event times, missing coordinate pairs, and attempts after DELIVERED are rejected.
+- If geocoding is unavailable, do not invent coordinates; retry later or enter a verified coordinate pair.

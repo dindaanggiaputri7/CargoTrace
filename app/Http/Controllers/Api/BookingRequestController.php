@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BookingPayment;
 use App\Models\BookingRequest;
 use App\Models\BookingRequestHistory;
+use App\Models\Customer;
 use App\Models\Quotation;
 use App\Models\Shipment;
 use App\Models\TrackingEvent;
@@ -14,6 +15,7 @@ use App\Services\AuditService;
 use App\Services\BookingCommunicationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -23,7 +25,7 @@ class BookingRequestController extends Controller
     private function relations(): array
     {
         return [
-            'customer:id,name,email', 'origin', 'destination', 'items',
+            'customer:id,name,email', 'customerRecord:id,name,company_name,email,phone,user_id', 'origin', 'destination', 'items',
             'reviewer:id,name', 'histories.actor:id,name',
             'quotations.carrier', 'quotations.preparer:id,name',
             'latestQuotation.carrier', 'latestQuotation.preparer:id,name',
@@ -91,9 +93,14 @@ class BookingRequestController extends Controller
         }
 
         $booking = DB::transaction(function () use ($data, $items, $request, $communication, $audit) {
+            $customerRecord = Customer::firstOrCreate(['user_id' => $request->user()->id], [
+                'name' => $request->user()->name,
+                'email' => $request->user()->email,
+            ]);
             $booking = BookingRequest::create($data + [
                 'request_number' => $this->requestNumber(),
                 'customer_id' => $request->user()->id,
+                'customer_record_id' => $customerRecord->id,
                 'status' => 'PENDING_REVIEW',
                 'submitted_at' => now(),
             ]);
@@ -263,26 +270,79 @@ class BookingRequestController extends Controller
         return response()->json(['message' => 'Penawaran ditolak.', 'data' => $booking->fresh()->load($this->relations())]);
     }
 
-    public function createPaymentIntent(Request $request, BookingRequest $booking, AuditService $audit)
+    public function createPaymentIntent(Request $request, BookingRequest $booking, AuditService $audit, BookingCommunicationService $communication)
     {
         abort_unless($request->user()->isCustomer(), 403);
         $this->authorizeCustomer($request, $booking);
-        if ($booking->status !== 'QUOTE_ACCEPTED') {
+
+        // Expire legacy/mock or overdue pending attempts before deciding whether checkout can resume.
+        DB::transaction(function () use ($booking, $audit, $communication) {
+            $lockedBooking = BookingRequest::query()->lockForUpdate()->findOrFail($booking->id);
+            $stalePayments = $lockedBooking->payments()->where('status', 'PENDING')
+                ->where(function ($query) {
+                    $query->where('provider', '!=', 'midtrans')
+                        ->orWhereNull('expires_at')
+                        ->orWhere('expires_at', '<=', now());
+                })->lockForUpdate()->get();
+
+            foreach ($stalePayments as $stalePayment) {
+                $stalePayment->update(['status' => 'EXPIRED']);
+                $audit->record(null, 'BOOKING_PAYMENT_EXPIRED', 'BookingPayment', $stalePayment->id,
+                    'Transaksi lama atau kedaluwarsa tidak dapat digunakan sebagai bukti pembayaran.',
+                    ['status' => 'PENDING'], ['status' => 'EXPIRED']);
+            }
+
+            $hasPaid = $lockedBooking->payments()->where('status', 'PAID')->exists();
+            $hasActivePending = $lockedBooking->payments()->where('provider', 'midtrans')->where('status', 'PENDING')
+                ->whereNotNull('expires_at')->where('expires_at', '>', now())->exists();
+            if ($lockedBooking->status === 'PENDING_PAYMENT' && !$hasPaid && !$hasActivePending) {
+                $lockedBooking->update(['status' => 'QUOTE_ACCEPTED']);
+                $this->recordHistory($lockedBooking, null, 'PENDING_PAYMENT', 'QUOTE_ACCEPTED',
+                    'Transaksi sebelumnya telah kedaluwarsa atau berasal dari simulasi; customer dapat membuat checkout Midtrans baru.');
+                $communication->notify($lockedBooking->customer, 'PAYMENT_EXPIRED', 'Transaksi pembayaran perlu dibuat ulang',
+                    'Transaksi lama tidak dapat diverifikasi. Silakan mulai pembayaran Midtrans kembali.', $lockedBooking);
+            }
+        });
+        $booking->refresh();
+
+        if (!in_array($booking->status, ['QUOTE_ACCEPTED', 'PENDING_PAYMENT'], true)) {
             throw ValidationException::withMessages(['payment' => ['Customer harus menyetujui penawaran sebelum membuat pembayaran.']]);
         }
         $quotation = $booking->latestQuotation;
         if (!$quotation || $quotation->status !== 'ACCEPTED') {
             throw ValidationException::withMessages(['quotation' => ['Penawaran yang disetujui tidak ditemukan.']]);
         }
-        $pending = $booking->payments()->where('status', 'PENDING')->where(function ($query) {
-            $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
-        })->latest()->first();
-        if ($pending) return response()->json(['message' => 'Pembayaran yang menunggu masih tersedia.', 'data' => $pending, 'demo_mode' => true]);
-        $booking->payments()->where('status', 'PENDING')->whereNotNull('expires_at')->where('expires_at', '<=', now())->update(['status' => 'EXPIRED']);
+        // Only a still-valid Midtrans transaction may be resumed. No local/demo payment can become PAID.
+        $pending = $booking->payments()->where('provider', 'midtrans')->where('status', 'PENDING')
+            ->whereNotNull('expires_at')->where('expires_at', '>', now())->latest()->first();
+        if ($pending) {
+            return response()->json([
+                'message' => 'Pembayaran Midtrans yang masih berlaku tersedia.',
+                'data' => $pending, 'demo_mode' => false,
+                'checkout_url' => data_get($pending->provider_data, 'redirect_url'),
+            ]);
+        }
 
-        // Layer 3: use Midtrans Snap when credentials are configured. Demo mode remains local/testing only.
-        $midtransServerKey = (string) config('services.midtrans.server_key');
+        if ($booking->status !== 'QUOTE_ACCEPTED') {
+            throw ValidationException::withMessages(['payment' => ['Status permintaan belum siap untuk membuat transaksi pembayaran baru.']]);
+        }
+
+        // Layer 3: real Midtrans Snap checkout; sandbox is recommended for academic demos.
+        $midtransServerKey = trim((string) config('services.midtrans.server_key'));
         if ($midtransServerKey !== '') {
+            $isProduction = (bool) config('services.midtrans.is_production');
+            $isSandboxKey = str_starts_with($midtransServerKey, 'SB-Mid-server-');
+            $environmentMismatch = $isProduction
+                ? $isSandboxKey
+                : !$isSandboxKey;
+            if ($environmentMismatch) {
+                return response()->json([
+                    'message' => $isProduction
+                        ? 'MIDTRANS_SERVER_KEY adalah key Sandbox, tetapi MIDTRANS_IS_PRODUCTION=true.'
+                        : 'MIDTRANS_SERVER_KEY adalah key Production, tetapi MIDTRANS_IS_PRODUCTION=false.',
+                    'code' => 'PAYMENT_GATEWAY_ENVIRONMENT_MISMATCH',
+                ], 503);
+            }
             if (strtoupper((string) $quotation->currency) !== 'IDR') {
                 throw ValidationException::withMessages(['currency' => ['Midtrans Snap pada konfigurasi ini hanya menerima quotation IDR.']]);
             }
@@ -299,6 +359,11 @@ class BookingRequestController extends Controller
                     'price' => $amount, 'quantity' => 1,
                     'name' => 'CargoTrace shipment booking',
                 ]],
+                'expiry' => [
+                    'start_time' => now()->format('Y-m-d H:i:s O'),
+                    'unit' => 'hour',
+                    'duration' => 24,
+                ],
             ];
             try {
                 $gateway = \Illuminate\Support\Facades\Http::withBasicAuth($midtransServerKey, '')
@@ -308,8 +373,41 @@ class BookingRequestController extends Controller
                 return response()->json(['message' => 'Payment gateway tidak dapat dihubungi. Silakan coba kembali.', 'code' => 'PAYMENT_GATEWAY_UNAVAILABLE'], 502);
             }
             if (!$gateway->successful() || !$gateway->json('token') || !$gateway->json('redirect_url')) {
-                report(new \RuntimeException('Midtrans Snap transaction creation failed: HTTP '.$gateway->status()));
-                return response()->json(['message' => 'Payment gateway menolak pembuatan transaksi.', 'code' => 'PAYMENT_GATEWAY_REJECTED'], 502);
+                $gatewayStatus = $gateway->status();
+                $gatewayPayload = $gateway->json() ?? [];
+                $gatewayMessages = data_get($gatewayPayload, 'error_messages',
+                    data_get($gatewayPayload, 'validation_messages', []));
+                if (is_string($gatewayMessages)) {
+                    $gatewayMessages = [$gatewayMessages];
+                }
+                $gatewayMessages = is_array($gatewayMessages)
+                    ? array_values(array_filter($gatewayMessages, fn ($message) => is_string($message) && trim($message) !== ''))
+                    : [];
+                $gatewayDetail = implode(' ', $gatewayMessages);
+
+                // Keep the actual gateway response for server-side diagnosis, but never log credentials.
+                Log::warning('Midtrans Snap transaction creation rejected.', [
+                    'http_status' => $gatewayStatus,
+                    'order_id' => $orderId,
+                    'environment' => config('services.midtrans.is_production') ? 'production' : 'sandbox',
+                    'endpoint' => config('services.midtrans.snap_url'),
+                    'gateway_error_messages' => $gatewayMessages,
+                ]);
+
+                $message = match ($gatewayStatus) {
+                    400, 408, 413 => 'Midtrans menolak data transaksi (HTTP '.$gatewayStatus.'). '.($gatewayDetail ?: 'Periksa nominal, mata uang, dan detail item quotation.'),
+                    401 => 'Midtrans menolak autentikasi (HTTP 401). Pastikan Server Key berasal dari Sandbox yang sama dengan endpoint Sandbox, dan tidak ada spasi saat menyalinnya.',
+                    402 => 'Akun Midtrans tidak memiliki akses ke metode pembayaran yang diminta (HTTP 402). Periksa pengaturan akses produk/payment channel pada dashboard Sandbox.',
+                    406 => 'Order ID transaksi sudah pernah digunakan (HTTP 406). Coba buat transaksi baru.',
+                    429 => 'Batas request Midtrans tercapai (HTTP 429). Tunggu sebentar lalu coba kembali.',
+                    default => 'Midtrans menolak pembuatan transaksi (HTTP '.$gatewayStatus.'). '.($gatewayDetail ?: 'Periksa konfigurasi dan coba kembali.'),
+                };
+
+                return response()->json([
+                    'message' => $message,
+                    'code' => 'PAYMENT_GATEWAY_REJECTED',
+                    'gateway_status' => $gatewayStatus,
+                ], 502);
             }
             $payment = DB::transaction(function () use ($booking, $quotation, $request, $audit, $orderId, $amount, $gateway) {
                 $payment = $booking->payments()->create([
@@ -333,36 +431,10 @@ class BookingRequestController extends Controller
             ], 201);
         }
 
-        // Mock checkout remains restricted to local/testing and is never used in production.
-        if (!app()->environment(['local', 'testing']) || !config('cargotrace.allow_demo_payments')) {
-            return response()->json(['message' => 'Payment gateway belum dikonfigurasi. Isi MIDTRANS_SERVER_KEY dan MIDTRANS_CLIENT_KEY untuk mengaktifkan pembayaran sandbox/production.', 'code' => 'PAYMENT_PROVIDER_NOT_CONFIGURED'], 503);
-        }
-
-        $payment = DB::transaction(function () use ($booking, $quotation, $request, $audit) {
-            $payment = $booking->payments()->create([
-                'quotation_id' => $quotation->id,
-                'customer_id' => $request->user()->id,
-                'amount' => $quotation->amount,
-                'currency' => $quotation->currency,
-                'provider' => 'mock',
-                'payment_method' => 'DEMO_CHECKOUT',
-                'provider_reference' => 'DEMO-'.Str::upper(Str::random(18)),
-                'status' => 'PENDING',
-                'expires_at' => now()->addMinutes(30),
-                'provider_data' => ['mode' => 'simulation', 'notice' => 'No real payment is processed.'],
-            ]);
-            $booking->update(['status' => 'PENDING_PAYMENT']);
-            $this->recordHistory($booking, $request->user(), 'QUOTE_ACCEPTED', 'PENDING_PAYMENT', 'Customer memulai checkout demo.');
-            $audit->record($request->user(), 'BOOKING_PAYMENT_INTENT_CREATED', 'BookingPayment', $payment->id,
-                'Payment demo intent dibuat untuk '.$booking->request_number.'.', null, ['status' => 'PENDING', 'provider' => 'mock']);
-            return $payment;
-        });
         return response()->json([
-            'message' => 'Demo checkout dibuat. Tidak ada uang sungguhan yang ditagihkan.',
-            'data' => $payment,
-            'demo_mode' => true,
-            'notice' => 'DEMO ONLY — this does not charge a real bank account or card.',
-        ], 201);
+            'message' => 'Payment gateway belum dikonfigurasi. Pembayaran tidak dapat dibuat dan status tidak akan diubah menjadi PAID.',
+            'code' => 'PAYMENT_PROVIDER_NOT_CONFIGURED',
+        ], 503);
     }
 
     public function convertToShipment(Request $request, BookingRequest $booking, BookingCommunicationService $communication, AuditService $audit)
@@ -392,6 +464,8 @@ class BookingRequestController extends Controller
                 'shipment_number' => $this->shipmentNumber(),
                 'customer_reference' => $locked->request_number,
                 'customer_id' => $locked->customer_id,
+                'customer_record_id' => $locked->customer_record_id,
+                'source_type' => 'BOOKING',
                 'created_by' => $request->user()->id,
                 'carrier_id' => $quotation->carrier_id,
                 'origin_location_id' => $locked->origin_location_id,
@@ -456,15 +530,15 @@ class BookingRequestController extends Controller
         return [
             'origin_location_id' => ['required', 'integer', 'exists:locations,id'],
             'destination_location_id' => ['required', 'integer', 'exists:locations,id', 'different:origin_location_id'],
-            'desired_departure_at' => ['nullable', 'date'],
-            'desired_arrival_at' => ['nullable', 'date', 'after_or_equal:desired_departure_at'],
+            'desired_departure_at' => ['required', 'date', 'after:now'],
+            'desired_arrival_at' => ['required', 'date', 'after:desired_departure_at'],
             'cargo_type' => ['required', 'string', 'max:120'],
             'cargo_description' => ['nullable', 'string', 'max:3000'],
             'package_count' => ['required', 'integer', 'min:1', 'max:100000'],
             'total_weight' => ['required', 'numeric', 'gt:0', 'max:999999999'],
             'weight_unit' => ['required', 'string', 'max:10'],
-            'total_volume' => ['nullable', 'numeric', 'gt:0', 'max:999999999'],
-            'volume_unit' => ['nullable', 'string', 'max:10'],
+            'total_volume' => ['required', 'numeric', 'gt:0', 'max:999999999'],
+            'volume_unit' => ['required', 'string', 'max:10'],
             'customer_notes' => ['nullable', 'string', 'max:3000'],
             'items' => ['required', 'array', 'min:1', 'max:50'],
             'items.*.item_name' => ['required', 'string', 'max:255'],

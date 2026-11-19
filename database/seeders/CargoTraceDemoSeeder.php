@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Carrier;
+use App\Models\Customer;
 use App\Models\Location;
 use App\Models\Shipment;
 use App\Models\ShipmentException;
@@ -37,6 +38,14 @@ class CargoTraceDemoSeeder extends Seeder
             'name' => 'Vertex Motors', 'password' => $password,
             'role' => User::ROLE_CUSTOMER, 'is_active' => true,
         ]);
+
+        foreach ([$aster, $northstar, $vertex] as $customerUser) {
+            Customer::updateOrCreate(['user_id' => $customerUser->id], [
+                'name' => $customerUser->name,
+                'company_name' => $customerUser->name,
+                'email' => $customerUser->email,
+            ]);
+        }
 
         $carriers = collect([
             ['code' => 'MAERSK', 'name' => 'Maersk', 'transport_mode' => 'Ocean', 'website' => 'https://www.maersk.com'],
@@ -80,9 +89,16 @@ class CargoTraceDemoSeeder extends Seeder
             $expectedArrival = $delivered ? now()->subDay() : now()->addDay();
             $currentEta = $delayHours > 0 ? $expectedArrival->copy()->addHours($delayHours) : null;
 
+            $customerRecord = Customer::firstOrCreate(['user_id' => $customer->id], [
+                'name' => $customer->name,
+                'company_name' => $customer->name,
+                'email' => $customer->email,
+            ]);
             $shipment = Shipment::firstOrCreate(['shipment_number' => $number], [
                 'customer_reference' => 'REF-'.$number,
                 'customer_id' => $customer->id,
+                'customer_record_id' => $customerRecord->id,
+                'source_type' => 'MANUAL',
                 'created_by' => $operator->id,
                 'carrier_id' => $carriers[$carrierCode]->id,
                 'origin_location_id' => $locations[$originCode]->id,
@@ -104,6 +120,10 @@ class CargoTraceDemoSeeder extends Seeder
                 'delivered_at' => $delivered ? now()->subHours(2) : null,
                 'notes' => 'Synthetic demonstration record. No real shipment data.',
             ]);
+
+            if (!$shipment->customer_record_id) {
+                $shipment->update(['customer_record_id' => $customerRecord->id]);
+            }
 
             if (!$shipment->items()->exists()) {
                 $shipment->items()->create([

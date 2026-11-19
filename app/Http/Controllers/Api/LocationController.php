@@ -63,6 +63,20 @@ class LocationController extends Controller
         return response()->json(['message' => 'Lokasi berhasil dihapus.']);
     }
 
+    public function unlocodeSearch(Request $request, \App\Services\UnlocodeService $service)
+    {
+        $data = $request->validate([
+            'country_code' => ['required', 'string', 'size:2'],
+            'city' => ['required', 'string', 'min:2', 'max:120'],
+        ]);
+        try {
+            $matches = $service->search($data['country_code'], $data['city']);
+            return response()->json(['data' => $matches, 'message' => $matches ? null : 'Tidak ditemukan kecocokan resmi. Kode boleh dikosongkan sampai diverifikasi.']);
+        } catch (RuntimeException) {
+            return response()->json(['data' => [], 'message' => 'Direktori UN/LOCODE tidak tersedia. Kode tidak diisi otomatis.'], 503);
+        }
+    }
+
     public function geocode(Request $request, GeocodingService $service)
     {
         $data = $request->validate(['query' => ['required', 'string', 'min:3', 'max:180']]);

@@ -15,7 +15,7 @@ class BookingRequest extends Model
     ];
 
     protected $fillable = [
-        'request_number', 'customer_id', 'origin_location_id', 'destination_location_id',
+        'request_number', 'customer_id', 'customer_record_id', 'origin_location_id', 'destination_location_id',
         'desired_departure_at', 'desired_arrival_at', 'cargo_type', 'cargo_description',
         'package_count', 'total_weight', 'weight_unit', 'total_volume', 'volume_unit',
         'customer_notes', 'status', 'submitted_at', 'reviewed_by', 'reviewed_at', 'operator_note', 'shipment_id',
@@ -32,6 +32,7 @@ class BookingRequest extends Model
     }
 
     public function customer(): BelongsTo { return $this->belongsTo(User::class, 'customer_id'); }
+    public function customerRecord(): BelongsTo { return $this->belongsTo(Customer::class, 'customer_record_id'); }
     public function reviewer(): BelongsTo { return $this->belongsTo(User::class, 'reviewed_by'); }
     public function origin(): BelongsTo { return $this->belongsTo(Location::class, 'origin_location_id'); }
     public function destination(): BelongsTo { return $this->belongsTo(Location::class, 'destination_location_id'); }

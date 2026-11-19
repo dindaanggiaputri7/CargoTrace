@@ -35,7 +35,7 @@ Layer 3 is an additive extension to the existing CargoTrace Laravel project. Lay
 - Provider credentials are encrypted with Laravel Crypt.
 - Webhook shared secrets are hashed and checked server-side.
 - Midtrans notifications require a valid SHA-512 signature and matching amount before payment is marked paid.
-- Payment demo confirmation remains local/testing only.
+- Payment success is accepted only from a signature-verified Midtrans server-to-server notification; no local demo-confirm endpoint exists. Unpaid transactions expire after 24 hours.
 
 ## Setup checklist
 

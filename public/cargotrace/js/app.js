@@ -8,6 +8,7 @@
   const USER_KEY = 'cargotrace_user';
   const STATUS_FLOW = ['CREATED', 'BOOKED', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED'];
   const EXCEPTION_TYPES = ['CUSTOMS_HOLD', 'WEATHER_DELAY', 'PORT_CONGESTION', 'DAMAGED', 'MISROUTED', 'DOCUMENTATION_ISSUE'];
+  const COUNTRY_OPTIONS = [["AF","Afghanistan"],["AL","Albania"],["DZ","Algeria"],["AS","American Samoa"],["AD","Andorra"],["AO","Angola"],["AI","Anguilla"],["AQ","Antarctica"],["AG","Antigua and Barbuda"],["AR","Argentina"],["AM","Armenia"],["AW","Aruba"],["AU","Australia"],["AT","Austria"],["AZ","Azerbaijan"],["BS","Bahamas"],["BH","Bahrain"],["BD","Bangladesh"],["BB","Barbados"],["BY","Belarus"],["BE","Belgium"],["BZ","Belize"],["BJ","Benin"],["BM","Bermuda"],["BT","Bhutan"],["BO","Bolivia"],["BQ","Bonaire, Sint Eustatius and Saba"],["BA","Bosnia and Herzegovina"],["BW","Botswana"],["BV","Bouvet Island"],["BR","Brazil"],["IO","British Indian Ocean Territory"],["BN","Brunei Darussalam"],["BG","Bulgaria"],["BF","Burkina Faso"],["BI","Burundi"],["CV","Cabo Verde"],["KH","Cambodia"],["CM","Cameroon"],["CA","Canada"],["KY","Cayman Islands"],["CF","Central African Republic"],["TD","Chad"],["CL","Chile"],["CN","China"],["CX","Christmas Island"],["CC","Cocos (Keeling) Islands"],["CO","Colombia"],["KM","Comoros"],["CG","Congo"],["CD","Congo, The Democratic Republic of the"],["CK","Cook Islands"],["CR","Costa Rica"],["HR","Croatia"],["CU","Cuba"],["CW","Curaçao"],["CY","Cyprus"],["CZ","Czechia"],["CI","Côte d'Ivoire"],["DK","Denmark"],["DJ","Djibouti"],["DM","Dominica"],["DO","Dominican Republic"],["EC","Ecuador"],["EG","Egypt"],["SV","El Salvador"],["GQ","Equatorial Guinea"],["ER","Eritrea"],["EE","Estonia"],["SZ","Eswatini"],["ET","Ethiopia"],["FK","Falkland Islands (Malvinas)"],["FO","Faroe Islands"],["FJ","Fiji"],["FI","Finland"],["FR","France"],["GF","French Guiana"],["PF","French Polynesia"],["TF","French Southern Territories"],["GA","Gabon"],["GM","Gambia"],["GE","Georgia"],["DE","Germany"],["GH","Ghana"],["GI","Gibraltar"],["GR","Greece"],["GL","Greenland"],["GD","Grenada"],["GP","Guadeloupe"],["GU","Guam"],["GT","Guatemala"],["GG","Guernsey"],["GN","Guinea"],["GW","Guinea-Bissau"],["GY","Guyana"],["HT","Haiti"],["HM","Heard Island and McDonald Islands"],["VA","Holy See (Vatican City State)"],["HN","Honduras"],["HK","Hong Kong"],["HU","Hungary"],["IS","Iceland"],["IN","India"],["ID","Indonesia"],["IR","Iran"],["IQ","Iraq"],["IE","Ireland"],["IM","Isle of Man"],["IL","Israel"],["IT","Italy"],["JM","Jamaica"],["JP","Japan"],["JE","Jersey"],["JO","Jordan"],["KZ","Kazakhstan"],["KE","Kenya"],["KI","Kiribati"],["KP","North Korea"],["KR","South Korea"],["KW","Kuwait"],["KG","Kyrgyzstan"],["LA","Laos"],["LV","Latvia"],["LB","Lebanon"],["LS","Lesotho"],["LR","Liberia"],["LY","Libya"],["LI","Liechtenstein"],["LT","Lithuania"],["LU","Luxembourg"],["MO","Macao"],["MG","Madagascar"],["MW","Malawi"],["MY","Malaysia"],["MV","Maldives"],["ML","Mali"],["MT","Malta"],["MH","Marshall Islands"],["MQ","Martinique"],["MR","Mauritania"],["MU","Mauritius"],["YT","Mayotte"],["MX","Mexico"],["FM","Micronesia, Federated States of"],["MD","Moldova"],["MC","Monaco"],["MN","Mongolia"],["ME","Montenegro"],["MS","Montserrat"],["MA","Morocco"],["MZ","Mozambique"],["MM","Myanmar"],["NA","Namibia"],["NR","Nauru"],["NP","Nepal"],["NL","Netherlands"],["NC","New Caledonia"],["NZ","New Zealand"],["NI","Nicaragua"],["NE","Niger"],["NG","Nigeria"],["NU","Niue"],["NF","Norfolk Island"],["MK","North Macedonia"],["MP","Northern Mariana Islands"],["NO","Norway"],["OM","Oman"],["PK","Pakistan"],["PW","Palau"],["PS","Palestine, State of"],["PA","Panama"],["PG","Papua New Guinea"],["PY","Paraguay"],["PE","Peru"],["PH","Philippines"],["PN","Pitcairn"],["PL","Poland"],["PT","Portugal"],["PR","Puerto Rico"],["QA","Qatar"],["RO","Romania"],["RU","Russian Federation"],["RW","Rwanda"],["RE","Réunion"],["BL","Saint Barthélemy"],["SH","Saint Helena, Ascension and Tristan da Cunha"],["KN","Saint Kitts and Nevis"],["LC","Saint Lucia"],["MF","Saint Martin (French part)"],["PM","Saint Pierre and Miquelon"],["VC","Saint Vincent and the Grenadines"],["WS","Samoa"],["SM","San Marino"],["ST","Sao Tome and Principe"],["SA","Saudi Arabia"],["SN","Senegal"],["RS","Serbia"],["SC","Seychelles"],["SL","Sierra Leone"],["SG","Singapore"],["SX","Sint Maarten (Dutch part)"],["SK","Slovakia"],["SI","Slovenia"],["SB","Solomon Islands"],["SO","Somalia"],["ZA","South Africa"],["GS","South Georgia and the South Sandwich Islands"],["SS","South Sudan"],["ES","Spain"],["LK","Sri Lanka"],["SD","Sudan"],["SR","Suriname"],["SJ","Svalbard and Jan Mayen"],["SE","Sweden"],["CH","Switzerland"],["SY","Syria"],["TW","Taiwan"],["TJ","Tajikistan"],["TZ","Tanzania"],["TH","Thailand"],["TL","Timor-Leste"],["TG","Togo"],["TK","Tokelau"],["TO","Tonga"],["TT","Trinidad and Tobago"],["TN","Tunisia"],["TM","Turkmenistan"],["TC","Turks and Caicos Islands"],["TV","Tuvalu"],["TR","Türkiye"],["UG","Uganda"],["UA","Ukraine"],["AE","United Arab Emirates"],["GB","United Kingdom"],["US","United States"],["UM","United States Minor Outlying Islands"],["UY","Uruguay"],["UZ","Uzbekistan"],["VU","Vanuatu"],["VE","Venezuela"],["VN","Vietnam"],["VG","Virgin Islands, British"],["VI","Virgin Islands, U.S."],["WF","Wallis and Futuna"],["EH","Western Sahara"],["YE","Yemen"],["ZM","Zambia"],["ZW","Zimbabwe"],["AX","Åland Islands"]];
   const state = {
     token: sessionStorage.getItem(TOKEN_KEY) || '',
     user: null,
@@ -100,7 +101,7 @@
   const locationName = (location) => location ? `${location.name || location.city || 'Location'}${location.country ? ', ' + location.country : ''}` : '—';
   const routeName = (shipment) => `${shipment?.origin?.city || shipment?.origin?.name || 'Origin'} → ${shipment?.destination?.city || shipment?.destination?.name || 'Destination'}`;
   const carrierName = (shipment) => shipment?.carrier?.name || shipment?.carrier_name || '—';
-  const customerName = (shipment) => shipment?.customer?.name || shipment?.customer_name || '—';
+  const customerName = (shipment) => shipment?.customerRecord?.company_name || shipment?.customerRecord?.name || shipment?.customer?.name || shipment?.customer_name || '—';
   const showToast = (message, type = 'success') => {
     const host = document.getElementById('toast-region');
     if (!host) return;
@@ -182,13 +183,12 @@
       {id:'dashboard',label:'Dashboard',icon:'dashboard'},
       {id:'shipments',label:'My Shipments',icon:'shipments'},
       {id:'request-booking',label:'Request Shipment',icon:'plus'},
-      {id:'bookings',label:'My Requests',icon:'file'},
       {id:'transport',label:'Transport Journey',icon:'map'},
       {id:'notifications',label:'Notifications',icon:'bell',count:state.notificationsUnread},
       {id:'profile',label:'Profile',icon:'profile'},
     ];
   };
-  const titleFor = (page) => ({dashboard:'Dashboard',users:'Users',carriers:'Carriers',locations:'Locations',shipments:state.user?.role === 'customer' ? 'My Shipments' : 'Shipments',audit:'Audit Logs',create:'Create Shipment',tracking:'Tracking',exceptions:'Exceptions',bookings:state.user?.role==='customer'?'My Requests':'Booking Requests','request-booking':state.selectedBooking?'Revise Request':'Request Shipment',notifications:'Notifications',profile:'Profile',transport:'Transport & Tracking',detail:state.selectedShipment?.shipment_number || 'Shipment detail'}[page] || 'CargoTrace');
+  const titleFor = (page) => ({dashboard:'Dashboard',users:'Users',carriers:'Carriers',locations:'Locations',shipments:state.user?.role === 'customer' ? 'My Shipments' : 'Shipments',audit:'Audit Logs',create:'Create Shipment',tracking:'Tracking',exceptions:'Exceptions',bookings:state.user?.role==='customer'?'My Shipments':'Booking Requests','request-booking':state.selectedBooking?'Revise Request':'Request Shipment',notifications:'Notifications',profile:'Profile',transport:'Transport & Tracking',detail:state.selectedShipment?.shipment_number || 'Shipment detail'}[page] || 'CargoTrace');
   const buildShell = () => {
     const user = state.user;
     const role = user.role;
@@ -423,7 +423,7 @@
         case 'audit': await renderAudit(host); break;
         case 'tracking': await renderTracking(host); break;
         case 'exceptions': await renderExceptions(host); break;
-        case 'bookings': await renderBookings(host); break;
+        case 'bookings': if(state.user.role==='customer') await renderCustomerWorkspace(host,'requests'); else await renderBookings(host); break;
         case 'transport': await renderTransport(host); break;
         case 'request-booking': await renderRequestBooking(host); break;
         case 'notifications': await renderNotifications(host); break;
@@ -539,11 +539,12 @@
     const destination = mapLocationPoint(shipment.destination, 'Destination');
     const event = shipment.latest_tracking_event || shipment.latestTrackingEvent || null;
     const eventLocation = event?.location || null;
+    const eventMeta = event?.metadata || {};
     const lat = event?.latitude ?? eventLocation?.latitude;
     const lng = event?.longitude ?? eventLocation?.longitude;
     const checkpoint = validMapPair(lat, lng) ? {
-      lat:Number(lat), lng:Number(lng), name:eventLocation?.city || eventLocation?.name || 'Recorded checkpoint',
-      country:eventLocation?.country || '', time:event?.event_time || null, description:event?.description || '',
+      lat:Number(lat), lng:Number(lng), name:eventMeta.location_name || eventLocation?.city || eventLocation?.name || 'Recorded checkpoint',
+      country:eventMeta.location_country || eventLocation?.country || '', time:event?.event_time || null, description:event?.description || '',
     } : null;
     return {origin, checkpoint, destination};
   }
@@ -764,6 +765,7 @@
 
   async function renderShipments(host) {
     const isCustomer=state.user.role==='customer';
+    if(isCustomer) return renderCustomerWorkspace(host);
     const isOperator=state.user.role==='operator';
     const query={search:state.filters.search||'',status:state.filters.status||'',carrier_id:state.filters.carrier_id||'',delayed:state.filters.delayed||'',per_page:15,page:state.currentPage};
     const [response,carrierResponse]=await Promise.all([api(`/shipments${queryString(query)}`),api('/carriers?per_page=100').catch(()=>({data:[]}))]);
@@ -802,9 +804,8 @@
       <div class="grid-2-1"><section class="panel"><form id="shipment-create-form">
         <div class="panel-head"><div><h3 class="panel-title">Customer &amp; carrier</h3><p class="panel-subtitle">Required fields are marked with *</p></div></div>
         <div class="form-grid">
-          ${!isEdit?`<div class="form-field"><label>Customer <span class="req">*</span></label><select name="customer_id" required><option value="">Select customer</option>${master.customers.map(c=>`<option value="${c.id}">${esc(c.name)} · ${esc(c.email)}</option>`).join('')}</select></div>`:`<div class="form-field"><label>Customer</label><input value="${esc(existing.customer?.name||'')}" disabled></div>`}
+          ${!isEdit?`<div class="form-field"><label>Customer <span class="req">*</span></label><select name="customer_record_id" required><option value="">Select customer record</option>${master.customers.map(c=>`<option value="${c.id}">${esc(c.company_name||c.name)}${c.email?` · ${esc(c.email)}`:' · Walk-in / no login'}</option>`).join('')}</select><button type="button" class="btn btn-secondary btn-sm" data-action="add-customer-record" style="margin-top:7px">+ Add customer</button></div>`:`<div class="form-field"><label>Customer</label><input value="${esc(existing.customerRecord?.company_name||existing.customerRecord?.name||existing.customer?.name||'')}" disabled></div>`}
           <div class="form-field"><label>Carrier <span class="req">*</span></label><select name="carrier_id" required><option value="">Select carrier</option>${master.carriers.map(c=>`<option value="${c.id}" ${selected('carrier_id',c.id)}>${esc(c.name)} · ${esc(c.code)}</option>`).join('')}</select></div>
-          <div class="form-field full"><label>Customer reference</label><input name="customer_reference" value="${esc(existing?.customer_reference||'')}" placeholder="e.g. PO-2026-0048"></div>
         </div>
         <div class="panel-head" style="margin-top:12px"><div><h3 class="panel-title">Route &amp; schedule</h3><p class="panel-subtitle">Use UTC for expected departure and arrival times.</p></div></div>
         <div class="form-grid">
@@ -829,9 +830,9 @@
     document.getElementById('shipment-create-form').addEventListener('submit',async e=>{
       e.preventDefault(); const form=e.currentTarget; const f=new FormData(form); const submit=document.getElementById('save-shipment'); submit.disabled=true;submit.textContent='Saving…';
       const body={
-        ...(isEdit?{}:{customer_id:Number(f.get('customer_id'))}),carrier_id:Number(f.get('carrier_id')),
+        ...(isEdit?{}:{customer_record_id:Number(f.get('customer_record_id'))}),carrier_id:Number(f.get('carrier_id')),
         origin_location_id:Number(f.get('origin_location_id')),destination_location_id:Number(f.get('destination_location_id')),
-        customer_reference:f.get('customer_reference')||null,cargo_type:f.get('cargo_type').trim(),cargo_description:f.get('cargo_description')||null,
+        cargo_type:f.get('cargo_type').trim(),cargo_description:f.get('cargo_description')||null,
         package_count:Number(f.get('package_count')),total_weight:Number(f.get('total_weight')),weight_unit:f.get('weight_unit'),total_volume:Number(f.get('total_volume')),volume_unit:f.get('volume_unit'),
         expected_departure_at:localIso(f.get('expected_departure_at')),
         notes:f.get('notes')||null,
@@ -843,7 +844,20 @@
         const shipment=result.data; if(shipment?.id) await viewShipment(shipment.id); else navigate('shipments');
       }catch(err){showToast(err.message,'error');submit.disabled=false;submit.textContent=isEdit?'Save changes':'Create shipment';}
     });
+    host.querySelector('[data-action="add-customer-record"]')?.addEventListener('click',openCustomerRecordDrawer);
   }
+
+  function openCustomerRecordDrawer(){
+    openDrawer('Add customer record','Create a customer directory entry. A login account is optional; this supports walk-in customers.',`<div class="form-field"><label>Customer name <span class="req">*</span></label><input name="name" required maxlength="255" placeholder="Contact or customer name"></div><div class="form-field"><label>Company / organization</label><input name="company_name" maxlength="255" placeholder="Company name (optional)"></div><div class="form-grid"><div class="form-field"><label>Email</label><input name="email" type="email" maxlength="255" placeholder="Email (optional)"></div><div class="form-field"><label>Phone</label><input name="phone" maxlength="40" placeholder="Phone (optional)"></div><div class="form-field"><label>City</label><input name="city" maxlength="120"></div><div class="form-field"><label>Country</label><input name="country" maxlength="120"></div></div><div class="form-field"><label>Address</label><textarea name="address" maxlength="2000"></textarea></div><div class="notice"><span class="notice-icon">${icon('info')}</span><div>This creates a customer record only. It does not create a login account or grant access to customer portal.</div></div>`,async f=>{
+      const body={name:f.get('name').trim(),company_name:f.get('company_name')||null,email:f.get('email')||null,phone:f.get('phone')||null,city:f.get('city')||null,country:f.get('country')||null,address:f.get('address')||null};
+      const response=await api('/customers',{method:'POST',body});
+      const record=response.data;
+      const select=document.querySelector('#shipment-create-form [name="customer_record_id"]');
+      if(select){const option=document.createElement('option');option.value=record.id;option.textContent=record.company_name||record.name;select.appendChild(option);select.value=String(record.id);}
+      closeDrawer();showToast('Customer record created.');
+    },'Save customer');
+  }
+
   async function viewShipment(id){try{const response=await api(`/shipments/${id}`);state.selectedShipment=response.data;state.page='detail';state.pageTitle=titleFor('detail');document.getElementById('breadcrumb-current').textContent=state.pageTitle;ROOT.querySelectorAll('.nav-link').forEach(b=>b.classList.toggle('active',b.dataset.nav==='shipments'));await renderPage();}catch(err){showToast(err.message,'error');}}
 
   function lifecycleHtml(shipment){
@@ -851,7 +865,9 @@
     return `<div class="lifecycle">${STATUS_FLOW.map((status,i)=>`<div class="life-step ${i<current?'done':i===current?'current':''}"><div class="life-track"><span style="width:${i<current?100:i===current?55:0}%"></span></div><div class="life-name">${status}</div><div class="life-date">${dateFmt(shipment[fields[i]],{time:false,zone:false}) || (i===current?'Current':'Pending')}</div></div>`).join('')}</div>`;
   }
   function eventHtml(event,index){
-    const loc=event.location?`${event.location.name || event.location.city || 'Location'}${event.location.country?', '+event.location.country:''}`:(event.latitude!=null?`${Number(event.latitude).toFixed(4)}, ${Number(event.longitude).toFixed(4)}`:'Location not recorded');
+    const meta=event.metadata||{};
+    const savedLocation=event.location?`${event.location.name || event.location.city || 'Location'}${event.location.country?', '+event.location.country:''}`:'';
+    const loc=meta.location_name || savedLocation || (event.latitude!=null?`${Number(event.latitude).toFixed(4)}, ${Number(event.longitude).toFixed(4)}`:'Location not recorded');
     return `<div class="timeline-event"><div class="timeline-rail"><div class="timeline-dot"></div><div class="timeline-line"></div></div><div class="timeline-main"><strong>${esc(event.status || human(event.event_type||'Tracking event'))}</strong><div class="cell-secondary">${esc(loc)}</div><p>${esc(event.description||'')}</p><small>${esc(event.creator?.name||'CargoTrace')} · ${esc(event.event_type||'')}</small></div><div class="timeline-time">${dateFmt(event.event_time,{time:true})}</div></div>`;
   }
   async function renderShipmentDetail(host){
@@ -902,7 +918,9 @@
     const trackingPoints=[];
     chronological.forEach((event,index)=>{
       const loc=event.location||{};
-      const point={name:loc.city||loc.name||'Recorded checkpoint',lat:event.latitude??loc.latitude,lng:event.longitude??loc.longitude,time:event.event_time,description:event.description};
+      const meta=event.metadata||{};
+      const placeName=meta.location_name||loc.city||loc.name||'Recorded checkpoint';
+      const point={name:placeName,lat:event.latitude??loc.latitude,lng:event.longitude??loc.longitude,time:event.event_time,description:event.description};
       if(valid(point.lat,point.lng)){
         const type=index===chronological.length-1?'Last checkpoint':'Tracking event';
         const saved={...point,type,lat:Number(point.lat),lng:Number(point.lng)};
@@ -961,7 +979,65 @@
   }
   async function openTrackingDrawer(s){
     const master=await loadMasterData(); const now=inputDate(new Date().toISOString());
-    openDrawer('Add tracking event',`${s.shipment_number} · ${routeName(s)} · ${s.status}`,`<div class="notice"><span class="notice-icon">${icon('info')}</span><div>Tracking is an append-only historical checkpoint. It will inherit the shipment’s current lifecycle status. Event time must not be in the future.</div></div><div class="form-field"><label>Shipment status</label><input value="${esc(s.status)}" disabled></div><div class="form-field"><label>Event time · UTC <span class="req">*</span></label><input name="event_time" type="datetime-local" required value="${now}" max="${now}"></div><div class="form-field"><label>Saved location</label><select name="location_id"><option value="">Choose a location (optional)</option>${master.locations.map(locationOption).join('')}</select><small>Coordinates from the selected saved location will be used.</small></div><div class="form-grid"><div class="form-field"><label>Latitude</label><input name="latitude" type="number" min="-90" max="90" step="any" placeholder="Optional"></div><div class="form-field"><label>Longitude</label><input name="longitude" type="number" min="-180" max="180" step="any" placeholder="Optional"></div></div><div class="form-field"><label>Description <span class="req">*</span></label><textarea name="description" required placeholder="Describe what happened at this checkpoint."></textarea></div>`,async f=>{const lat=f.get('latitude'),lng=f.get('longitude');if((lat&&!lng)||(!lat&&lng))throw new Error('Latitude and longitude must be entered together.');const body={event_time:localIso(f.get('event_time')),description:f.get('description').trim(),location_id:f.get('location_id')?Number(f.get('location_id')):null,latitude:lat?Number(lat):null,longitude:lng?Number(lng):null};await api(`/shipments/${s.id}/tracking-events`,{method:'POST',body});closeDrawer();showToast('Tracking event added to the shipment history.');await viewShipment(s.id);},'Save tracking event');
+    const savedLocations=master.locations.map(location=>`<option value="${location.id}" data-lat="${esc(location.latitude??'')}" data-lng="${esc(location.longitude??'')}">${esc(location.name)}${location.city?` · ${esc(location.city)}`:''}${location.country?`, ${esc(location.country)}`:''}${location.code?` · ${esc(location.code)}`:''}</option>`).join('');
+    openDrawer('Add tracking event',`${s.shipment_number} · ${routeName(s)} · ${s.status}`,`<div class="notice"><span class="notice-icon">${icon('info')}</span><div>Record the real checkpoint reported by the carrier or operations team. You can search any place name; it does not need to exist in Admin Locations. Tracking is append-only and does not change shipment status.</div></div><div class="form-field"><label>Shipment status</label><input value="${esc(s.status)}" disabled></div><div class="form-field"><label>Event time · UTC <span class="req">*</span></label><input name="event_time" type="datetime-local" required value="${now}" max="${now}"></div><div class="form-field"><label>Checkpoint location · type any place</label><div style="display:flex;gap:8px;align-items:stretch"><input id="tracking-location-query" name="location_query" maxlength="180" placeholder="e.g. Tanjung Pinang, Kepulauan Riau" style="flex:1;min-width:0"><button class="btn btn-secondary" type="button" id="tracking-geocode-button">Find location</button></div><small>Search a port, city, island or checkpoint. Select the correct result to save its coordinates.</small><div id="tracking-geocode-results" style="margin-top:8px"></div><input type="hidden" name="location_name"><input type="hidden" name="location_address"><input type="hidden" name="location_country"><input type="hidden" name="location_region"><div id="tracking-geocode-selected" class="tiny muted" style="margin-top:6px">No free-text location selected.</div></div><div class="form-field"><label>Or choose an Admin saved location (optional)</label><select name="location_id"><option value="">No saved location selected</option>${savedLocations}</select><small>Use this when the checkpoint is already registered in Admin Locations.</small></div><div class="form-grid"><div class="form-field"><label>Latitude</label><input name="latitude" type="number" min="-90" max="90" step="any" placeholder="Filled after selecting a search result"></div><div class="form-field"><label>Longitude</label><input name="longitude" type="number" min="-180" max="180" step="any" placeholder="Filled after selecting a search result"></div></div><div class="form-field"><label>Description <span class="req">*</span></label><textarea name="description" required placeholder="e.g. Carrier reports that the vessel has reached Tanjung Pinang."></textarea></div>`,async f=>{
+      const lat=String(f.get('latitude')||'').trim(),lng=String(f.get('longitude')||'').trim();
+      const query=String(f.get('location_query')||'').trim();
+      let locationName=String(f.get('location_name')||'').trim();
+      const locationId=String(f.get('location_id')||'').trim();
+      if((lat&&!lng)||(!lat&&lng))throw new Error('Latitude and longitude must be entered together.');
+      if(query&&!locationName&&lat&&lng)locationName=query; // supports a manually verified coordinate pair
+      if(query&&!locationName&&!locationId)throw new Error('Search for this checkpoint and select a result before saving.');
+      if(locationName&&(!lat||!lng))throw new Error('Select a geocoding result so the checkpoint has valid coordinates.');
+      if(locationName&&locationId)throw new Error('Use either a searched checkpoint or an Admin saved location, not both.');
+      const body={event_time:localIso(f.get('event_time')),description:String(f.get('description')||'').trim(),location_id:locationId?Number(locationId):null,location_name:locationName||null,location_address:f.get('location_address')||null,location_country:f.get('location_country')||null,location_region:f.get('location_region')||null,latitude:lat?Number(lat):null,longitude:lng?Number(lng):null};
+      await api(`/shipments/${s.id}/tracking-events`,{method:'POST',body});closeDrawer();showToast('Tracking checkpoint saved to shipment history.');await viewShipment(s.id);
+    },'Save tracking event');
+
+    const form=document.getElementById('drawer-form');
+    const queryInput=document.getElementById('tracking-location-query');
+    const searchButton=document.getElementById('tracking-geocode-button');
+    const resultHost=document.getElementById('tracking-geocode-results');
+    const selectedHost=document.getElementById('tracking-geocode-selected');
+    const savedSelect=form?.elements.location_id;
+    let searchResults=[];
+    let lastSearchAt=0;
+    queryInput?.addEventListener('input',()=>{
+      form.elements.location_name.value='';form.elements.location_address.value='';form.elements.location_country.value='';form.elements.location_region.value='';
+      if(savedSelect)savedSelect.value='';form.elements.latitude.value='';form.elements.longitude.value='';
+      resultHost.innerHTML='';selectedHost.textContent='Search and select a location to fill its coordinates.';
+    });
+    savedSelect?.addEventListener('change',()=>{
+      const option=savedSelect.selectedOptions[0];
+      form.elements.location_name.value='';form.elements.location_address.value='';form.elements.location_country.value='';form.elements.location_region.value='';
+      if(savedSelect.value){
+        form.elements.latitude.value=option.dataset.lat||'';form.elements.longitude.value=option.dataset.lng||'';
+        selectedHost.textContent='Saved Admin location selected. Its stored coordinates will be used.';
+        queryInput.value='';resultHost.innerHTML='';
+      }else{
+        form.elements.latitude.value='';form.elements.longitude.value='';selectedHost.textContent='No saved location selected.';
+      }
+    });
+    searchButton?.addEventListener('click',async()=>{
+      const query=queryInput.value.trim();
+      if(query.length<3){showToast('Type at least 3 characters to search for a checkpoint.','error');return;}
+      if(Date.now()-lastSearchAt<1000){showToast('Please wait a moment before searching again.','error');return;}
+      lastSearchAt=Date.now();searchButton.disabled=true;searchButton.textContent='Searching…';resultHost.innerHTML='<div class="tiny muted">Searching location suggestions…</div>';
+      try{
+        const response=await api(`/tracking/geocode/search${queryString({query})}`);searchResults=response.data||[];
+        resultHost.innerHTML=searchResults.length?`<div class="form-field"><label>Choose the correct place</label><select id="tracking-geocode-select"><option value="">Select a result</option>${searchResults.map((item,index)=>`<option value="${index}">${esc(item.display_name)}</option>`).join('')}</select></div>`:'<div class="tiny muted">No location found. Try adding the province or country, or enter verified coordinates manually.</div>';
+        document.getElementById('tracking-geocode-select')?.addEventListener('change',event=>{
+          if(event.target.value==='')return;
+          const result=searchResults[Number(event.target.value)];if(!result)return;
+          const readableName=[result.city,result.region,result.country].filter((value,index,array)=>value&&array.indexOf(value)===index).join(', ')||result.display_name;
+          form.elements.location_name.value=readableName;form.elements.location_address.value=result.address||result.display_name||'';
+          form.elements.location_country.value=result.country||'';form.elements.location_region.value=result.region||'';
+          form.elements.latitude.value=Number(result.latitude).toFixed(7);form.elements.longitude.value=Number(result.longitude).toFixed(7);
+          if(savedSelect)savedSelect.value='';selectedHost.textContent=`Selected checkpoint: ${readableName} · ${Number(result.latitude).toFixed(5)}, ${Number(result.longitude).toFixed(5)}`;
+        });
+      }catch(error){resultHost.innerHTML=`<div class="error-banner">${esc(error.message)} You can retry the search later.</div>`;}
+      finally{searchButton.disabled=false;searchButton.textContent='Find location';}
+    });
   }
   function openEtaDrawer(s){
     const current=inputDate(s.current_eta||s.expected_arrival_at);
@@ -1029,8 +1105,10 @@
     host.querySelectorAll('[data-action="locations-page"]').forEach(b=>b.addEventListener('click',async()=>{state.currentPage=Number(b.dataset.page);await renderPage();}));
   }
   function openLocationDrawer(location=null){
-    openDrawer(location?'Edit location':'Add location',location?'Keep routing and tracking coordinates accurate.':'Add a standardized port, terminal or warehouse.',`<div class="form-field"><label>Location name <span class="req">*</span></label><input name="name" required value="${esc(location?.name||'')}" placeholder="e.g. Rotterdam"></div><div class="form-grid"><div class="form-field"><label>UN/LOCODE</label><input name="code" value="${esc(location?.code||'')}" placeholder="NLRTM"></div><div class="form-field"><label>Type <span class="req">*</span></label><select name="type" required>${['PORT','WAREHOUSE','TERMINAL','AIRPORT','OTHER'].map(t=>`<option ${location?.type===t?'selected':''}>${t}</option>`).join('')}</select></div></div><div class="form-field"><label>Address</label><input name="address" value="${esc(location?.address||'')}" placeholder="Street, terminal or facility"></div><div class="form-grid"><div class="form-field"><label>Country <span class="req">*</span></label><input name="country" required value="${esc(location?.country||'')}" placeholder="Country"></div><div class="form-field"><label>Country code</label><input name="country_code" maxlength="2" value="${esc(location?.country_code||'')}" placeholder="US"></div><div class="form-field"><label>City</label><input name="city" value="${esc(location?.city||'')}" placeholder="City"></div><div class="form-field"><label>Region / state</label><input name="region" value="${esc(location?.region||'')}" placeholder="Region"></div></div><div class="form-field"><label>Timezone</label><input name="timezone" value="${esc(location?.timezone||'')}" placeholder="Europe/Amsterdam"></div><div class="form-field"><label>Find coordinates</label><div style="display:flex;gap:7px"><input id="geocode-query" style="flex:1" placeholder="City, country and address"><button type="button" class="btn btn-secondary btn-sm" id="geocode-button">Find coordinates</button></div><small>Geocoding uses OpenStreetMap Nominatim. Review returned coordinates before saving.</small><div id="geocode-results"></div></div><div class="form-grid"><div class="form-field"><label>Latitude</label><input name="latitude" type="number" min="-90" max="90" step="any" value="${esc(location?.latitude??'')}" placeholder="-90 to 90"></div><div class="form-field"><label>Longitude</label><input name="longitude" type="number" min="-180" max="180" step="any" value="${esc(location?.longitude??'')}" placeholder="-180 to 180"></div></div><div class="notice"><span class="notice-icon">${icon('info')}</span><div>Coordinates are required for map plotting but may be entered manually if geocoding is unavailable. Do not use assumed or live GPS locations.</div></div>`,async f=>{const lat=f.get('latitude'),lng=f.get('longitude');if((lat&&!lng)||(!lat&&lng))throw new Error('Latitude and longitude must be entered together.');const body={name:f.get('name').trim(),code:f.get('code')||null,type:f.get('type'),address:f.get('address')||null,country:f.get('country').trim(),country_code:f.get('country_code')?f.get('country_code').toUpperCase():null,city:f.get('city')||null,region:f.get('region')||null,timezone:f.get('timezone')||null,latitude:lat?Number(lat):null,longitude:lng?Number(lng):null};await api(location?`/locations/${location.id}`:'/locations',{method:location?'PATCH':'POST',body});closeDrawer();showToast(location?'Location updated.':'Location created.');await renderPage();},location?'Save changes':'Create location');
-    document.getElementById('geocode-button')?.addEventListener('click',async()=>{const q=document.getElementById('geocode-query').value.trim();if(q.length<3){showToast('Enter at least 3 characters for geocoding.','error');return;}const button=document.getElementById('geocode-button');button.disabled=true;button.textContent='Finding…';try{const res=await api(`/locations/geocode/search${queryString({query:q})}`);const results=res.data||[];const host=document.getElementById('geocode-results');host.innerHTML=results.length?`<div class="form-field" style="margin-top:8px"><label>Choose a result</label><select id="geocode-select"><option value="">Select result</option>${results.map((r,i)=>`<option value="${i}">${esc(r.display_name)}</option>`).join('')}</select></div>`:'<div class="muted tiny" style="margin-top:7px">No matching coordinates found.</div>';document.getElementById('geocode-select')?.addEventListener('change',e=>{const r=results[Number(e.target.value)];if(!r)return;document.querySelector('#drawer-form [name="latitude"]').value=r.latitude;document.querySelector('#drawer-form [name="longitude"]').value=r.longitude;if(r.country_code)document.querySelector('#drawer-form [name="country_code"]').value=r.country_code;});}catch(err){document.getElementById('geocode-results').innerHTML=`<div class="error-banner">${esc(err.message)} Enter coordinates manually.</div>`;}finally{button.disabled=false;button.textContent='Find coordinates';}});
+    openDrawer(location?'Edit location':'Add location',location?'Keep routing and tracking coordinates accurate.':'Add a standardized port, terminal or warehouse.',`<div class="form-field"><label>Location name <span class="req">*</span></label><input name="name" required value="${esc(location?.name||'')}" placeholder="e.g. Rotterdam"></div><div class="form-grid"><div class="form-field"><label>UN/LOCODE</label><input name="code" value="${esc(location?.code||'')}" placeholder="NLRTM"></div><div class="form-field"><label>Type <span class="req">*</span></label><select name="type" required>${['PORT','WAREHOUSE','TERMINAL','AIRPORT','OTHER'].map(t=>`<option ${location?.type===t?'selected':''}>${t}</option>`).join('')}</select></div></div><div class="form-field"><label>Address</label><input name="address" value="${esc(location?.address||'')}" placeholder="Street, terminal or facility"></div><div class="form-grid"><div class="form-field"><label>Country <span class="req">*</span></label><select name="country" required><option value="">Choose country</option>${COUNTRY_OPTIONS.map(([code,name])=>`<option value="${esc(name)}" data-country-code="${code}" ${location?.country_code===code||(!location?.country_code&&location?.country===name)?'selected':''}>${esc(name)}</option>`).join('')}</select></div><div class="form-field"><label>Country code · ISO 3166-1</label><input name="country_code" maxlength="2" readonly value="${esc(location?.country_code||'')}" placeholder="Auto from country"></div><div class="form-field"><label>City</label><input name="city" value="${esc(location?.city||'')}" placeholder="City"></div><div class="form-field"><label>Region / state</label><input name="region" value="${esc(location?.region||'')}" placeholder="Region"></div></div><div class="form-field"><label>Timezone</label><input name="timezone" value="${esc(location?.timezone||'')}" placeholder="Europe/Amsterdam"></div><div class="form-field"><label>Find coordinates</label><div style="display:flex;gap:7px"><input id="geocode-query" style="flex:1" placeholder="City, country and address"><button type="button" class="btn btn-secondary btn-sm" id="geocode-button">Find coordinates</button></div><small>Geocoding uses OpenStreetMap Nominatim. Review returned coordinates before saving.</small><div id="geocode-results"></div></div><div class="form-grid"><div class="form-field"><label>Latitude</label><input name="latitude" type="number" min="-90" max="90" step="any" value="${esc(location?.latitude??'')}" placeholder="-90 to 90"></div><div class="form-field"><label>Longitude</label><input name="longitude" type="number" min="-180" max="180" step="any" value="${esc(location?.longitude??'')}" placeholder="-180 to 180"></div></div><div class="notice"><span class="notice-icon">${icon('info')}</span><div>Coordinates are required for map plotting but may be entered manually if geocoding is unavailable. Do not use assumed or live GPS locations.</div></div>`,async f=>{const lat=f.get('latitude'),lng=f.get('longitude');if((lat&&!lng)||(!lat&&lng))throw new Error('Latitude and longitude must be entered together.');const body={name:f.get('name').trim(),code:f.get('code')||null,type:f.get('type'),address:f.get('address')||null,country:f.get('country').trim(),country_code:f.get('country_code')?f.get('country_code').toUpperCase():null,city:f.get('city')||null,region:f.get('region')||null,timezone:f.get('timezone')||null,latitude:lat?Number(lat):null,longitude:lng?Number(lng):null};await api(location?`/locations/${location.id}`:'/locations',{method:location?'PATCH':'POST',body});closeDrawer();showToast(location?'Location updated.':'Location created.');await renderPage();},location?'Save changes':'Create location');
+    const locationForm=document.querySelector('#drawer-form');
+    locationForm?.elements.country?.addEventListener('change',e=>{const option=e.target.selectedOptions[0];locationForm.elements.country_code.value=option?.dataset.countryCode||'';});
+    document.getElementById('geocode-button')?.addEventListener('click',async()=>{const q=document.getElementById('geocode-query').value.trim();if(q.length<3){showToast('Enter at least 3 characters for geocoding.','error');return;}const button=document.getElementById('geocode-button');button.disabled=true;button.textContent='Finding…';try{const res=await api(`/locations/geocode/search${queryString({query:q})}`);const results=res.data||[];const host=document.getElementById('geocode-results');host.innerHTML=results.length?`<div class="form-field" style="margin-top:8px"><label>Choose a result</label><select id="geocode-select"><option value="">Select result</option>${results.map((r,i)=>`<option value="${i}">${esc(r.display_name)}</option>`).join('')}</select></div>`:'<div class="muted tiny" style="margin-top:7px">No matching coordinates found.</div>';document.getElementById('geocode-select')?.addEventListener('change',async e=>{const r=results[Number(e.target.value)];if(!r)return;const form=document.querySelector('#drawer-form');form.elements.latitude.value=r.latitude;form.elements.longitude.value=r.longitude;if(r.country_code){const countryOption=[...form.elements.country.options].find(option=>option.dataset.countryCode===r.country_code.toUpperCase());if(countryOption)form.elements.country.value=countryOption.value;form.elements.country_code.value=r.country_code.toUpperCase();}if(r.city)form.elements.city.value=r.city;if(r.region)form.elements.region.value=r.region;if(r.address)form.elements.address.value=r.address;const resultHost=document.getElementById('geocode-results');if(r.country_code&&r.city){resultHost.insertAdjacentHTML('beforeend','<div class="tiny muted" style="margin-top:8px">Checking the official UNECE UN/LOCODE directory…</div>');try{const codes=await api(`/locations/unlocode/search${queryString({country_code:r.country_code,city:r.city})}`);const choices=codes.data||[];resultHost.innerHTML+=choices.length?`<div class="form-field" style="margin-top:8px"><label>Official UN/LOCODE suggestion · confirm before saving</label><select id="unlocode-select"><option value="">Select official code</option>${choices.map((c,i)=>`<option value="${i}">${esc(c.code)} · ${esc(c.name)}</option>`).join('')}</select></div>`:`<div class="tiny muted" style="margin-top:8px">No official UN/LOCODE match returned. Code is left blank; do not guess it.</div>`;document.getElementById('unlocode-select')?.addEventListener('change',ev=>{const c=choices[Number(ev.target.value)];if(c)form.elements.code.value=c.code;});}catch(_){resultHost.innerHTML+='<div class="tiny muted" style="margin-top:8px">UN/LOCODE lookup unavailable. Verify the code manually before saving.</div>';}}});}catch(err){document.getElementById('geocode-results').innerHTML=`<div class="error-banner">${esc(err.message)} Enter coordinates manually.</div>`;}finally{button.disabled=false;button.textContent='Find coordinates';}});
   }
 
   async function renderAudit(host){
@@ -1042,7 +1120,7 @@
   }
   async function renderTracking(host){
     const response=await api(`/shipments${queryString({search:state.filters.tracking||'',per_page:30,page:state.currentPage})}`);const {items,meta}=paginator(response);
-    host.innerHTML=`${heading('Operations','Tracking','Record manual checkpoints and review the saved shipment journey.',`<button class="btn btn-secondary" data-nav="shipments">View shipments ${icon('arrow')}</button>`)}<div class="notice"><span class="notice-icon">${icon('info')}</span><div><strong>Recorded checkpoints only</strong><br>Tracking events are append-only historical records. No physical live GPS or direct carrier integration is used.</div></div><section class="panel"><div class="panel-head"><div><h3 class="panel-title">Shipment tracking workspace</h3><p class="panel-subtitle">Select a shipment to inspect its history or add a checkpoint.</p></div></div><form id="tracking-filter-form" class="toolbar"><div class="searchbox">${icon('search')}<input name="search" class="control" placeholder="Search shipment number or cargo" value="${esc(state.filters.tracking||'')}"></div><button class="btn btn-secondary btn-sm" type="submit">${icon('search')} Search</button></form><div class="table-wrap"><table class="data-table"><thead><tr><th>Shipment</th><th>Customer / route</th><th>Current status</th><th>Last checkpoint</th><th>Current ETA</th><th>Action</th></tr></thead><tbody>${items.map(s=>{const e=s.latest_tracking_event;return `<tr><td><button class="btn-link cell-primary" data-action="view-shipment" data-id="${s.id}">${esc(s.shipment_number)}</button><div class="cell-secondary">${esc(carrierName(s))}</div></td><td><span class="strong">${esc(customerName(s))}</span><div class="cell-secondary">${esc(routeName(s))}</div></td><td>${statusBadge(s.status)}</td><td>${esc(e?.location?.name||e?.location?.city||'Not recorded')}<div class="cell-secondary">${e?.event_time?dateFmt(e.event_time,{time:true}):'No event yet'}</div></td><td>${dateFmt(s.current_eta||s.expected_arrival_at,{time:true})}</td><td><div class="table-actions"><button class="btn btn-secondary btn-sm" data-action="add-tracking-list" data-id="${s.id}">Add event</button><button class="btn-link" data-action="view-shipment" data-id="${s.id}">View →</button></div></td></tr>`}).join('')||tableEmpty('No shipments available.')}</tbody></table></div>${paginatorHtml(meta,'tracking-page')}</section>`;
+    host.innerHTML=`${heading('Operations','Tracking','Record manual checkpoints and review the saved shipment journey.',`<button class="btn btn-secondary" data-nav="shipments">View shipments ${icon('arrow')}</button>`)}<div class="notice"><span class="notice-icon">${icon('info')}</span><div><strong>Recorded checkpoints only</strong><br>Tracking events are append-only historical records. No physical live GPS or direct carrier integration is used.</div></div><section class="panel"><div class="panel-head"><div><h3 class="panel-title">Shipment tracking workspace</h3><p class="panel-subtitle">Select a shipment to inspect its history or add a checkpoint.</p></div></div><form id="tracking-filter-form" class="toolbar"><div class="searchbox">${icon('search')}<input name="search" class="control" placeholder="Search shipment number or cargo" value="${esc(state.filters.tracking||'')}"></div><button class="btn btn-secondary btn-sm" type="submit">${icon('search')} Search</button></form><div class="table-wrap"><table class="data-table"><thead><tr><th>Shipment</th><th>Customer / route</th><th>Current status</th><th>Last checkpoint</th><th>Current ETA</th><th>Action</th></tr></thead><tbody>${items.map(s=>{const e=s.latest_tracking_event;return `<tr><td><button class="btn-link cell-primary" data-action="view-shipment" data-id="${s.id}">${esc(s.shipment_number)}</button><div class="cell-secondary">${esc(carrierName(s))}</div></td><td><span class="strong">${esc(customerName(s))}</span><div class="cell-secondary">${esc(routeName(s))}</div></td><td>${statusBadge(s.status)}</td><td>${esc(e?.metadata?.location_name||e?.location?.name||e?.location?.city||'Not recorded')}<div class="cell-secondary">${e?.event_time?dateFmt(e.event_time,{time:true}):'No event yet'}</div></td><td>${dateFmt(s.current_eta||s.expected_arrival_at,{time:true})}</td><td><div class="table-actions"><button class="btn btn-secondary btn-sm" data-action="add-tracking-list" data-id="${s.id}">Add event</button><button class="btn-link" data-action="view-shipment" data-id="${s.id}">View →</button></div></td></tr>`}).join('')||tableEmpty('No shipments available.')}</tbody></table></div>${paginatorHtml(meta,'tracking-page')}</section>`;
     document.getElementById('tracking-filter-form').addEventListener('submit',async e=>{e.preventDefault();state.filters.tracking=new FormData(e.currentTarget).get('search');state.currentPage=1;await renderPage();});
     host.querySelectorAll('[data-action="add-tracking-list"]').forEach(b=>b.addEventListener('click',async()=>{try{const res=await api(`/shipments/${b.dataset.id}`);await openTrackingDrawer(res.data);}catch(err){showToast(err.message,'error');}}));
     host.querySelectorAll('[data-action="tracking-page"]').forEach(b=>b.addEventListener('click',async()=>{state.currentPage=Number(b.dataset.page);await renderPage();}));bindCommonActions(host);
@@ -1118,6 +1196,78 @@
     host.querySelectorAll('[data-action="trip-assign"]').forEach(b=>b.addEventListener('click',async()=>{const shipmentId=prompt('Shipment database ID:');if(!shipmentId)return;const leg=prompt('Leg order (1, 2, ...):','1');if(!leg)return;try{await api(`/transport-trips/${b.dataset.id}/assignments`,{method:'POST',body:{shipment_id:Number(shipmentId),leg_order:Number(leg)}});showToast('Shipment assigned to trip.');await renderPage();}catch(err){showToast(err.message,'error');}}));
   }
 
+  async function renderCustomerWorkspace(host, forcedTab=null){
+    const tabs=['all','requests','active','delivered'];
+    if(forcedTab && tabs.includes(forcedTab)) state.customerWorkspaceTab=forcedTab;
+    const activeTab=tabs.includes(state.customerWorkspaceTab)?state.customerWorkspaceTab:'all';
+    const search=(state.customerWorkspaceSearch||'').trim().toLowerCase();
+    const [shipmentResponse,bookingResponse]=await Promise.all([
+      api('/shipments?per_page=100'),
+      api('/booking-requests?per_page=100'),
+    ]);
+    const shipments=paginator(shipmentResponse).items;
+    const bookings=paginator(bookingResponse).items;
+    const activeShipments=shipments.filter(x=>x.status!=='DELIVERED');
+    const deliveredShipments=shipments.filter(x=>x.status==='DELIVERED');
+    const searchable=(row,isBooking)=>{
+      const parts=isBooking
+        ? [row.request_number,row.cargo_type,row.origin?.name,row.origin?.city,row.destination?.name,row.destination?.city,row.status]
+        : [row.shipment_number,row.cargo_type,row.origin?.name,row.origin?.city,row.destination?.name,row.destination?.city,row.status];
+      return !search||parts.filter(Boolean).join(' ').toLowerCase().includes(search);
+    };
+    let rows=[];
+    if(activeTab==='all') rows=[
+      ...bookings.filter(b=>b.status!=='CONVERTED'&&searchable(b,true)).map(b=>({kind:'request',record:b})),
+      ...shipments.filter(s=>searchable(s,false)).map(s=>({kind:'shipment',record:s})),
+    ];
+    if(activeTab==='requests') rows=bookings.filter(b=>searchable(b,true)).map(b=>({kind:'request',record:b}));
+    if(activeTab==='active') rows=activeShipments.filter(s=>searchable(s,false)).map(s=>({kind:'shipment',record:s}));
+    if(activeTab==='delivered') rows=deliveredShipments.filter(s=>searchable(s,false)).map(s=>({kind:'shipment',record:s}));
+
+    const bookingAction=(b)=>{
+      if(b.status==='NEEDS_REVISION')return `<button class="btn btn-secondary btn-sm" data-action="workspace-revise" data-id="${b.id}">Revise</button>`;
+      if(b.status==='QUOTED')return `<button class="btn btn-secondary btn-sm" data-action="workspace-quote" data-id="${b.id}">Review quotation</button>`;
+      if(['QUOTE_ACCEPTED','PENDING_PAYMENT'].includes(b.status))return `<button class="btn btn-sm" data-action="workspace-pay" data-id="${b.id}">${b.status==='PENDING_PAYMENT'?'Open payment':'Pay quotation'}</button>`;
+      if(b.status==='READY_FOR_CONVERSION')return `<span class="tiny muted">Waiting for shipment creation</span>`;
+      if(b.status==='CONVERTED'&&b.shipment_id)return `<button class="btn-link" data-action="workspace-shipment" data-id="${b.shipment_id}">Open shipment →</button>`;
+      return `<span class="tiny muted">No action required</span>`;
+    };
+    const rowHtml=rows.map(({kind,record:r})=>{
+      if(kind==='request'){
+        const q=r.latest_quotation;
+        const payment=r.latest_payment;
+        return `<tr><td><div class="cell-primary">${esc(r.request_number)}</div><div class="cell-secondary">Booking request</div></td><td><div class="strong">${esc(bookingRoute(r))}</div><div class="cell-secondary">${esc(r.cargo_type||'Cargo')} · ${fmtNumber(r.package_count)} packages · ${r.total_weight?`${fmtNumber(r.total_weight)} ${esc(r.weight_unit||'KG')}`:'Weight n/a'}</div></td><td>${q?`<div class="strong">${esc(moneyFmt(q.amount,q.currency))}</div><div class="cell-secondary">${esc(q.carrier?.name||'Quotation')}</div>`:(payment?`${esc(payment.status)} payment`:'Not quoted yet')}</td><td>${bookingBadge(r.status)}</td><td><div class="table-actions">${bookingAction(r)}</div></td></tr>`;
+      }
+      const eta=r.status==='DELIVERED'?r.delivered_at:(r.current_eta||r.expected_arrival_at);
+      return `<tr><td><button class="btn-link cell-primary" data-action="workspace-shipment" data-id="${r.id}">${esc(r.shipment_number)}</button><div class="cell-secondary">Shipment</div></td><td><div class="strong">${esc(routeName(r))}</div><div class="cell-secondary">${esc(r.cargo_type||'Cargo')} · ${fmtNumber(r.package_count)} packages · ${r.total_weight?`${fmtNumber(r.total_weight)} ${esc(r.weight_unit||'KG')}`:'Weight n/a'}</div></td><td>${dateFmt(eta,{time:true})}</td><td>${statusBadge(r.status)}</td><td><button class="btn btn-secondary btn-sm" data-action="workspace-shipment" data-id="${r.id}">Track shipment</button></td></tr>`;
+    }).join('');
+    host.innerHTML=`${heading('Customer portal','My Shipments','View booking requests and confirmed shipments together. Booking requests remain separate from shipment records.',actionBtn('Request shipment','workspace-new-request','plus'))}
+      <div class="stats-grid customer-stats" style="margin-bottom:14px">
+        ${statCard('All shipments',shipments.length,'Confirmed shipment records','shipments')}
+        ${statCard('Active',activeShipments.length,'Not yet delivered','tracking')}
+        ${statCard('Delivered',deliveredShipments.length,'Completed shipments','check')}
+        ${statCard('Requests',bookings.filter(b=>b.status!=='CONVERTED').length,'Separate booking records','file')}
+      </div>
+      <section class="panel"><div class="panel-head"><div><h3 class="panel-title">My shipment workspace</h3><p class="panel-subtitle">Requests and shipments are shown in one place; their records and workflow stay separate.</p></div></div>
+        <div class="toolbar" style="margin-bottom:12px;flex-wrap:wrap">
+          <button class="btn ${activeTab==='all'?'':'btn-secondary'} btn-sm" data-workspace-tab="all">All</button>
+          <button class="btn ${activeTab==='requests'?'':'btn-secondary'} btn-sm" data-workspace-tab="requests">Requests (${bookings.length})</button>
+          <button class="btn ${activeTab==='active'?'':'btn-secondary'} btn-sm" data-workspace-tab="active">Active Shipments (${activeShipments.length})</button>
+          <button class="btn ${activeTab==='delivered'?'':'btn-secondary'} btn-sm" data-workspace-tab="delivered">Delivered (${deliveredShipments.length})</button>
+        </div>
+        <form id="customer-workspace-search" class="toolbar"><div class="searchbox">${icon('search')}<input class="control" name="search" placeholder="Search request, shipment or route" value="${esc(state.customerWorkspaceSearch||'')}"></div><button class="btn btn-secondary btn-sm" type="submit">${icon('search')} Search</button><button class="btn btn-quiet btn-sm" id="customer-workspace-clear" type="button">Clear</button></form>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Reference</th><th>Route / cargo</th><th>${activeTab==='requests'?'Quotation / payment':'ETA / quotation'}</th><th>Status</th><th>Action</th></tr></thead><tbody>${rowHtml||tableEmpty(activeTab==='requests'?'No booking requests found.':activeTab==='delivered'?'No delivered shipments found.':'No records found for this view.')}</tbody></table></div>
+      </section>`;
+    host.querySelectorAll('[data-workspace-tab]').forEach(btn=>btn.addEventListener('click',()=>{state.customerWorkspaceTab=btn.dataset.workspaceTab;renderPage();}));
+    host.querySelector('#customer-workspace-search')?.addEventListener('submit',e=>{e.preventDefault();state.customerWorkspaceSearch=new FormData(e.currentTarget).get('search')||'';renderPage();});
+    host.querySelector('#customer-workspace-clear')?.addEventListener('click',()=>{state.customerWorkspaceSearch='';renderPage();});
+    host.querySelector('[data-action="workspace-new-request"]')?.addEventListener('click',()=>{state.selectedBooking=null;navigate('request-booking');});
+    host.querySelectorAll('[data-action="workspace-shipment"]').forEach(btn=>btn.addEventListener('click',()=>viewShipment(btn.dataset.id)));
+    host.querySelectorAll('[data-action="workspace-quote"]').forEach(btn=>btn.addEventListener('click',()=>openCustomerQuotationDrawer(bookings.find(x=>String(x.id)===btn.dataset.id))));
+    host.querySelectorAll('[data-action="workspace-pay"]').forEach(btn=>btn.addEventListener('click',()=>startBookingPayment(bookings.find(x=>String(x.id)===btn.dataset.id))));
+    host.querySelectorAll('[data-action="workspace-revise"]').forEach(btn=>btn.addEventListener('click',()=>{state.selectedBooking=bookings.find(x=>String(x.id)===btn.dataset.id);navigate('request-booking');}));
+  }
+
   async function renderBookings(host){
     const customer=state.user.role==='customer';
     const filter=state.filters.bookings||{};
@@ -1128,7 +1278,7 @@
         if(b.status==='NEEDS_REVISION')return `<button class="btn btn-secondary btn-sm" data-action="booking-revise" data-id="${b.id}">Revise request</button>`;
         if(b.status==='QUOTED')return `<button class="btn btn-secondary btn-sm" data-action="booking-view-quote" data-id="${b.id}">Review quotation</button>`;
         if(b.status==='QUOTE_ACCEPTED')return `<button class="btn btn-sm" data-action="booking-payment" data-id="${b.id}">Continue to payment</button>`;
-        if(b.status==='PENDING_PAYMENT')return `<button class="btn btn-sm" data-action="booking-payment" data-id="${b.id}">Open demo checkout</button>`;
+        if(b.status==='PENDING_PAYMENT')return `<button class="btn btn-sm" data-action="booking-payment" data-id="${b.id}">Open payment</button>`;
         if(b.status==='READY_FOR_CONVERSION')return `<span class="tiny muted">Waiting for operator</span>`;
         if(b.status==='CONVERTED'&&b.shipment_id)return `<button class="btn-link" data-action="booking-shipment" data-id="${b.shipment_id}">Shipment ${esc(b.shipment?.shipment_number||'created')} →</button>`;
         return `<span class="tiny muted">No action required</span>`;
@@ -1158,7 +1308,7 @@
     if(editing&&editing.status!=='NEEDS_REVISION'){state.selectedBooking=null;return navigate('bookings',false);}
     const master=await loadMasterData();
     const locations=master.locations||[];
-    host.innerHTML=`${heading('Customer portal',editing?'Revise shipment request':'Request a shipment',editing?'Update the information requested by the operator.':'Tell the operations team about the cargo and route you need.',`<button class="btn btn-secondary" data-action="back-bookings">${icon('back')} My requests</button>`)}<div class="notice"><span class="notice-icon">${icon('info')}</span><div>This form creates a booking request, not a confirmed shipment. An operator will review the details and prepare a quotation before a shipment number is assigned.</div></div><form id="booking-request-form" class="panel booking-form"><div class="panel-head"><div><h3 class="panel-title">Shipment details</h3><p class="panel-subtitle">Fields marked * are required.</p></div></div><div class="form-grid"><div class="form-field"><label>Origin <span class="req">*</span></label><select name="origin_location_id" required><option value="">Choose origin</option>${locations.map(l=>locationOption(l)).join('')}</select></div><div class="form-field"><label>Destination <span class="req">*</span></label><select name="destination_location_id" required><option value="">Choose destination</option>${locations.map(l=>locationOption(l)).join('')}</select></div><div class="form-field"><label>Cargo type <span class="req">*</span></label><input name="cargo_type" required maxlength="120" value="${esc(editing?.cargo_type||'')}" placeholder="e.g. General cargo"></div><div class="form-field"><label>Number of packages <span class="req">*</span></label><input name="package_count" type="number" min="1" required value="${esc(editing?.package_count||1)}"></div><div class="form-field"><label>Total weight <span class="req">*</span></label><div class="form-grid"><input name="total_weight" type="number" min="0.001" step="0.001" required value="${esc(editing?.total_weight||'')}" placeholder="Weight"><select name="weight_unit"><option>KG</option><option ${editing?.weight_unit==='TON'?'selected':''}>TON</option></select></div></div><div class="form-field"><label>Total volume</label><div class="form-grid"><input name="total_volume" type="number" min="0.001" step="0.001" value="${esc(editing?.total_volume||'')}" placeholder="Volume"><select name="volume_unit"><option>CBM</option><option ${editing?.volume_unit==='M3'?'selected':''}>M3</option></select></div></div><div class="form-field"><label>Desired departure · UTC</label><input name="desired_departure_at" type="datetime-local" value="${inputDate(editing?.desired_departure_at)}"></div><div class="form-field"><label>Desired arrival · UTC</label><input name="desired_arrival_at" type="datetime-local" value="${inputDate(editing?.desired_arrival_at)}"></div><div class="form-field full"><label>Cargo description</label><textarea name="cargo_description" maxlength="3000" placeholder="Describe the cargo, handling needs or packaging.">${esc(editing?.cargo_description||'')}</textarea></div><div class="form-field full"><label>Notes for operations</label><textarea name="customer_notes" maxlength="3000" placeholder="Additional instructions or preferred schedule.">${esc(editing?.customer_notes||'')}</textarea></div><div class="form-field"><label>Item name <span class="req">*</span></label><input name="item_name" required value="${esc(editing?.items?.[0]?.item_name||editing?.cargo_type||'')}" placeholder="Main item"></div><div class="form-field"><label>Item quantity <span class="req">*</span></label><input name="item_quantity" type="number" min="1" required value="${esc(editing?.items?.[0]?.quantity||1)}"></div></div><div class="form-actions"><button class="btn btn-secondary" type="button" data-action="back-bookings">Cancel</button><button class="btn" type="submit">${editing?'Send revised request':'Submit request'} ${icon('arrow')}</button></div></form>`;
+    host.innerHTML=`${heading('Customer portal',editing?'Revise shipment request':'Request a shipment',editing?'Update the information requested by the operator.':'Tell the operations team about the cargo and route you need.',`<button class="btn btn-secondary" data-action="back-bookings">${icon('back')} My Shipments</button>`)}<div class="notice"><span class="notice-icon">${icon('info')}</span><div>This form creates a booking request, not a confirmed shipment. An operator will review the details and prepare a quotation before a shipment number is assigned.</div></div><form id="booking-request-form" class="panel booking-form"><div class="panel-head"><div><h3 class="panel-title">Shipment details</h3><p class="panel-subtitle">Fields marked * are required.</p></div></div><div class="form-grid"><div class="form-field"><label>Origin <span class="req">*</span></label><select name="origin_location_id" required><option value="">Choose origin</option>${locations.map(l=>locationOption(l)).join('')}</select></div><div class="form-field"><label>Destination <span class="req">*</span></label><select name="destination_location_id" required><option value="">Choose destination</option>${locations.map(l=>locationOption(l)).join('')}</select></div><div class="form-field"><label>Cargo type <span class="req">*</span></label><input name="cargo_type" required maxlength="120" value="${esc(editing?.cargo_type||'')}" placeholder="e.g. General cargo"></div><div class="form-field"><label>Number of packages <span class="req">*</span></label><input name="package_count" type="number" min="1" required value="${esc(editing?.package_count||1)}"></div><div class="form-field"><label>Total weight <span class="req">*</span></label><div class="form-grid"><input name="total_weight" type="number" min="0.001" step="0.001" required value="${esc(editing?.total_weight||'')}" placeholder="Weight"><select name="weight_unit"><option>KG</option><option ${editing?.weight_unit==='TON'?'selected':''}>TON</option></select></div></div><div class="form-field"><label>Total volume <span class="req">*</span></label><div class="form-grid"><input name="total_volume" type="number" min="0.001" step="0.001" required value="${esc(editing?.total_volume||'')}" placeholder="Volume"><select name="volume_unit" required><option>CBM</option><option ${editing?.volume_unit==='M3'?'selected':''}>M3</option></select></div></div><div class="form-field"><label>Desired departure · UTC <span class="req">*</span></label><input name="desired_departure_at" type="datetime-local" required value="${inputDate(editing?.desired_departure_at)}"></div><div class="form-field"><label>Desired arrival · UTC <span class="req">*</span></label><input name="desired_arrival_at" type="datetime-local" required value="${inputDate(editing?.desired_arrival_at)}"></div><div class="form-field full"><label>Cargo description</label><textarea name="cargo_description" maxlength="3000" placeholder="Describe the cargo, handling needs or packaging.">${esc(editing?.cargo_description||'')}</textarea></div><div class="form-field full"><label>Notes for operations</label><textarea name="customer_notes" maxlength="3000" placeholder="Additional instructions or preferred schedule.">${esc(editing?.customer_notes||'')}</textarea></div><div class="form-field"><label>Item name <span class="req">*</span></label><input name="item_name" required value="${esc(editing?.items?.[0]?.item_name||editing?.cargo_type||'')}" placeholder="Main item"></div><div class="form-field"><label>Item quantity <span class="req">*</span></label><input name="item_quantity" type="number" min="1" required value="${esc(editing?.items?.[0]?.quantity||1)}"></div></div><div class="form-actions"><button class="btn btn-secondary" type="button" data-action="back-bookings">Cancel</button><button class="btn" type="submit">${editing?'Send revised request':'Submit request'} ${icon('arrow')}</button></div></form>`;
     if(editing){const form=host.querySelector('#booking-request-form');form.elements.origin_location_id.value=String(editing.origin_location_id);form.elements.destination_location_id.value=String(editing.destination_location_id);}
     host.querySelectorAll('[data-action="back-bookings"]').forEach(b=>b.addEventListener('click',()=>{state.selectedBooking=null;navigate('bookings');}));
     host.querySelector('#booking-request-form')?.addEventListener('submit',async e=>{
@@ -1189,19 +1339,19 @@
     if(!booking)return;
     try{
       let payment=booking.latest_payment;
-      let checkoutUrl=null;
-      if(!payment||payment.status!=='PENDING'){
+      const validPending=payment?.status==='PENDING' && payment?.provider==='midtrans' && payment?.expires_at && Date.parse(payment.expires_at)>Date.now();
+      let checkoutUrl=validPending?(payment.provider_data?.redirect_url||null):null;
+      // A legacy/simulated or expired attempt is not proof of payment; the API expires it and creates a verified intent.
+      if(!validPending){
         const response=await api(`/booking-requests/${booking.id}/payments`,{method:'POST',body:{}});
-        payment=response.data; checkoutUrl=response.checkout_url||null;
-      } else if(payment.provider==='midtrans') {
-        checkoutUrl=payment.provider_data?.redirect_url||null;
+        payment=response.data;
+        checkoutUrl=response.checkout_url||payment?.provider_data?.redirect_url||null;
       }
-      if(payment.provider==='midtrans'){
-        if(!checkoutUrl)throw new Error('Checkout URL payment gateway belum tersedia. Hubungi operator.');
-        window.location.assign(checkoutUrl);
-        return;
+      if(payment?.provider!=='midtrans'){
+        throw new Error('Pembayaran harus melalui Midtrans Sandbox/Production. Pembayaran simulasi tidak dapat mengubah status menjadi PAID.');
       }
-      openDrawer('Demo payment checkout',`${booking.request_number} · ${payment.provider_reference}`,`<div class="booking-quote-total">${esc(moneyFmt(payment.amount,payment.currency))}</div><div class="notice notice-warning"><span class="notice-icon">${icon('info')}</span><div><strong>DEMO ONLY — no real money will be charged.</strong><br>This local checkout simulates a successful payment so the booking workflow can be tested. It is not connected to a bank, card network or live payment gateway.</div></div><div class="info-list"><div class="info-row"><span>Payment reference</span><strong>${esc(payment.provider_reference)}</strong></div><div class="info-row"><span>Expires</span><strong>${dateFmt(payment.expires_at,{time:true})}</strong></div><div class="info-row"><span>Status</span><strong>${esc(payment.status)}</strong></div></div>`,async()=>{await api(`/booking-payments/${payment.id}/demo-confirm`,{method:'POST',body:{}});closeDrawer();showToast('Demo payment confirmed. Operator can now create the shipment.');await renderPage();},'Confirm demo payment');
+      if(!checkoutUrl)throw new Error('Checkout URL Midtrans belum tersedia. Periksa konfigurasi MIDTRANS di server.');
+      window.location.assign(checkoutUrl);
     }catch(err){showToast(err.message,'error');}
   }
 

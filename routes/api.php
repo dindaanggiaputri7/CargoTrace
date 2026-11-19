@@ -46,22 +46,21 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('/booking-requests/{booking}/quotation/accept', [BookingRequestController::class, 'acceptQuotation']);
         Route::post('/booking-requests/{booking}/quotation/decline', [BookingRequestController::class, 'declineQuotation']);
         Route::post('/booking-requests/{booking}/payments', [BookingRequestController::class, 'createPaymentIntent']);
-        Route::post('/booking-payments/{payment}/demo-confirm', [BookingPaymentController::class, 'demoConfirm']);
     });
 
     Route::middleware('role:operator')->group(function () {
-        Route::post('/transport-trips', [TransportController::class, 'storeTrip']);
-        Route::patch('/transport-trips/{trip}', [TransportController::class, 'updateTrip']);
-        Route::post('/transport-trips/{trip}/assignments', [TransportController::class, 'assignShipment']);
-        Route::patch('/transport-assignments/{assignment}/unassign', [TransportController::class, 'unassignShipment']);
-        Route::post('/transport-trips/{trip}/positions', [TransportController::class, 'addManualPosition']);
+        // Operator-only free-text checkpoint lookup; the selected coordinates are stored on the tracking event.
+        Route::get('/tracking/geocode/search', [LocationController::class, 'geocode'])->middleware('throttle:10,1');
         Route::post('/booking-requests/{booking}/review', [BookingRequestController::class, 'review']);
         Route::post('/booking-requests/{booking}/quotation', [BookingRequestController::class, 'createQuotation']);
         Route::post('/booking-requests/{booking}/convert', [BookingRequestController::class, 'convertToShipment']);
     });
 
     // Read-only customer directory for shipment creation; operators do not receive user-management access.
-    Route::middleware('role:admin,operator')->get('/customers', [CustomerDirectoryController::class, 'index']);
+    Route::middleware('role:admin,operator')->group(function () {
+        Route::get('/customers', [CustomerDirectoryController::class, 'index']);
+        Route::post('/customers', [CustomerDirectoryController::class, 'store']);
+    });
 
     // All roles can read permitted shipment information. Customer scope is enforced in controller queries.
     Route::get('/shipments', [ShipmentController::class, 'index']);
@@ -106,6 +105,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('/tracking-providers', [TransportController::class, 'providers']);
         Route::post('/tracking-providers', [TransportController::class, 'storeProvider']);
         Route::get('/locations/geocode/search', [LocationController::class, 'geocode'])->middleware('throttle:10,1');
+        Route::get('/locations/unlocode/search', [LocationController::class, 'unlocodeSearch'])->middleware('throttle:10,1');
         Route::apiResource('carriers', CarrierController::class)->except(['index', 'show']);
         Route::apiResource('locations', LocationController::class)->except(['index', 'show']);
         Route::get('/users', [AdminUserController::class, 'index']);
