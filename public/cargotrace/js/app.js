@@ -245,7 +245,7 @@
               <p class="lp-badge"><i></i>Pelacakan kiriman kargo</p>
               <h1>Pantau kiriman Anda dari asal sampai tujuan.</h1>
               <p class="lp-sub">CargoTrace mencatat setiap checkpoint perjalanan kiriman dan memperbarui estimasi tibanya. Semua status ada di satu tempat, jadi Anda tidak perlu lagi bertanya ke sana-sini.</p>
-              <div class="lp-cta"><button class="lp-btn lp-primary lp-big" type="button" data-action="landing-register">Daftar gratis</button><button class="lp-btn lp-outline lp-big" type="button" data-action="landing-login">Masuk ke akun</button></div>
+              <div class="lp-cta"><button class="lp-btn lp-primary lp-big" type="button" data-action="landing-register">Daftar</button><button class="lp-btn lp-outline lp-big" type="button" data-action="landing-login">Masuk ke akun</button></div>
               <ul class="lp-facts"><li>${ic('check')}Checkpoint tercatat</li><li>${ic('clock')}Waktu dalam UTC</li><li>${ic('map')}Peta semua kiriman</li></ul>
               <div class="lp-stage">
                 <div class="lp-stagebar"><strong>Contoh perjalanan kiriman</strong><span>Ilustrasi, bukan GPS langsung</span></div>
@@ -1447,3 +1447,4 @@
   }
   start();
 })();
+
