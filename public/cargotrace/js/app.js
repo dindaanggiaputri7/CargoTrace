@@ -230,76 +230,115 @@
   }
   function showLanding() {
     state.user = null; state.page = 'welcome';
+    const ic = (n) => `<span class="lp-ic">${icon(n)}</span>`;
     ROOT.innerHTML = `
       <div class="lp">
         <header class="lp-navwrap"><nav class="lp-nav" aria-label="Navigasi utama">
-          <a class="lp-brand" href="#lp-top" data-scroll="lp-top"><span class="lp-logo">C</span>CargoTrace</a>
-          <div class="lp-links"><a href="#lp-fitur" data-scroll="lp-fitur">Fitur</a><a href="#lp-cara" data-scroll="lp-cara">Cara kerja</a><a href="#lp-moda" data-scroll="lp-moda">Moda</a><a href="#lp-peran" data-scroll="lp-peran">Peran</a></div>
+          <a class="lp-brand" href="#lp-top" data-scroll="lp-top"><span class="lp-logo">C</span><span>CargoTrace</span></a>
+          <div class="lp-links"><a href="#lp-tentang" data-scroll="lp-tentang">Tentang</a><a href="#lp-fitur" data-scroll="lp-fitur">Fitur</a><a href="#lp-cara" data-scroll="lp-cara">Cara kerja</a><a href="#lp-faq" data-scroll="lp-faq">FAQ</a></div>
           <div class="lp-auth"><button class="lp-btn lp-ghost" type="button" data-action="landing-login">Masuk</button><button class="lp-btn lp-light" type="button" data-action="landing-register">Daftar</button></div>
         </nav></header>
+
         <main id="lp-top">
           <section class="lp-hero">
-            <p class="lp-badge"><i></i>Pelacakan kiriman untuk customer &amp; tim logistik</p>
-            <h1>Lihat posisi kiriman.<br><span>Di setiap checkpoint.</span></h1>
-            <p class="lp-sub">CargoTrace menyatukan riwayat perjalanan, ETA, dan status kiriman dalam satu linimasa yang mudah dibaca, lewat laut, udara, maupun darat.</p>
-            <div class="lp-cta"><button class="lp-btn lp-primary lp-big" type="button" data-action="landing-register">Daftar sebagai customer</button><button class="lp-btn lp-outline lp-big" type="button" data-action="landing-login">Sudah punya akun? Masuk</button></div>
-            <p class="lp-note">Akses aman · Tampilan sesuai peran akun</p>
-            <div class="lp-stage">
-              <div class="lp-stagebar"><strong>Ringkasan perjalanan</strong><span>Rute ilustrasi · bukan GPS langsung</span></div>
-              <svg viewBox="0 0 900 460" role="img" aria-label="Peta rute dengan kapal, pesawat, dan paket yang terdeteksi">
-                <defs><pattern id="lpDots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.3" fill="#3D8BFF" opacity=".3"/></pattern><radialGradient id="lpFade"><stop offset="55%" stop-color="#fff"/><stop offset="100%" stop-color="#000"/></radialGradient><mask id="lpMask"><rect width="900" height="460" fill="url(#lpFade)"/></mask><linearGradient id="lpRoute" x1="0" x2="1"><stop offset="0" stop-color="#8EC5FF"/><stop offset="1" stop-color="#3D8BFF"/></linearGradient></defs>
-                <rect width="900" height="460" fill="url(#lpDots)" mask="url(#lpMask)"/>
-                <g fill="#1d3f6e" opacity=".55"><path d="M60 300c40-50 110-60 150-30s40 80-10 110-130 10-140-80z"/><path d="M330 120c50-40 130-30 160 10s-10 90-70 90-120-60-90-100z"/><path d="M600 260c60-50 160-30 190 20s-30 110-100 100-130-70-90-120z"/></g>
-                <path id="lpR1" class="lp-route" d="M110 330 C 230 130, 420 110, 520 210 S 720 330, 790 130" fill="none" stroke="url(#lpRoute)" stroke-width="3" stroke-dasharray="7 9" stroke-linecap="round"/>
-                <path id="lpR2" class="lp-route" d="M110 330 C 260 400, 460 410, 600 330" fill="none" stroke="#5aa2ff" stroke-width="2" stroke-dasharray="3 8" opacity=".6"/>
-                <g class="lp-node"><circle cx="110" cy="330" r="18" class="h"/><circle cx="110" cy="330" r="7"/><text x="110" y="368">Asal</text></g>
-                <g class="lp-node"><circle cx="355" cy="153" r="18" class="h"/><circle cx="355" cy="153" r="7"/><text x="355" y="125">Checkpoint</text></g>
-                <g class="lp-node"><circle cx="610" cy="262" r="18" class="h"/><circle cx="610" cy="262" r="7"/><text x="610" y="300">Checkpoint</text></g>
-                <g class="lp-node"><circle cx="790" cy="130" r="18" class="h"/><circle cx="790" cy="130" r="7"/><text x="790" y="100">Tujuan</text></g>
-                <g class="lp-detect" transform="translate(458 168)"><path d="M0 12V0h12M56 0h12v12M68 44v12H56M12 56H0V44" fill="none" stroke="#8EC5FF" stroke-width="2.2" stroke-linecap="round"/><rect x="18" y="14" width="32" height="28" rx="3" fill="#3D8BFF"/><path d="M18 24h32M34 14v10" stroke="#142D4E" stroke-width="2"/><rect x="-6" y="-26" width="104" height="20" rx="10" fill="#0A1B33" stroke="#3D8BFF" stroke-opacity=".6"/><text x="46" y="-12" text-anchor="middle" class="chip">Paket terdeteksi</text></g>
-                <g><g transform="translate(-14 -10)"><path d="M0 12h28l-5 10H5z" fill="#fff"/><rect x="6" y="3" width="12" height="9" fill="#8EC5FF"/><rect x="9" y="-3" width="4" height="6" fill="#fff"/></g><animateMotion dur="14s" repeatCount="indefinite"><mpath href="#lpR2"/></animateMotion></g>
-                <g><path d="M-14 0l28-5-9 5 9 5z M-4 -2l-6-12 4 0 8 10z M-4 2l-6 12 4 0 8-10z" fill="#fff"/><animateMotion dur="11s" repeatCount="indefinite" rotate="auto"><mpath href="#lpR1"/></animateMotion></g>
-              </svg>
-              <div class="lp-float lp-f1"><b>Truk · Tujuan akhir</b><span>ETA diperbarui otomatis</span></div>
-              <div class="lp-float lp-f2"><b>MSKU-2841</b><span>Di perjalanan · checkpoint 2 dari 3</span></div>
+            <div class="lp-wrap">
+              <p class="lp-badge"><i></i>Pelacakan kiriman kargo</p>
+              <h1>Pantau kiriman Anda dari asal sampai tujuan.</h1>
+              <p class="lp-sub">CargoTrace mencatat setiap checkpoint perjalanan kiriman dan memperbarui estimasi tibanya. Semua status ada di satu tempat, jadi Anda tidak perlu lagi bertanya ke sana-sini.</p>
+              <div class="lp-cta"><button class="lp-btn lp-primary lp-big" type="button" data-action="landing-register">Daftar gratis</button><button class="lp-btn lp-outline lp-big" type="button" data-action="landing-login">Masuk ke akun</button></div>
+              <ul class="lp-facts"><li>${ic('check')}Checkpoint tercatat</li><li>${ic('clock')}Waktu dalam UTC</li><li>${ic('map')}Peta semua kiriman</li></ul>
+              <div class="lp-stage">
+                <div class="lp-stagebar"><strong>Contoh perjalanan kiriman</strong><span>Ilustrasi, bukan GPS langsung</span></div>
+                <svg viewBox="0 0 900 440" role="img" aria-label="Ilustrasi rute kiriman dengan kapal, pesawat, dan paket yang terdeteksi">
+                  <defs><linearGradient id="lpRoute" x1="0" x2="1"><stop offset="0" stop-color="#8EC5FF"/><stop offset="1" stop-color="#4C93FF"/></linearGradient></defs>
+                  <g fill="#1F4474" opacity=".6"><path d="M60 300c40-50 110-60 150-30s40 80-10 110-130 10-140-80z"/><path d="M330 110c50-40 130-30 160 10s-10 90-70 90-120-60-90-100z"/><path d="M600 250c60-50 160-30 190 20s-30 110-100 100-130-70-90-120z"/></g>
+                  <path id="lpR1" class="lp-route" d="M110 320 C 230 120, 420 100, 520 200 S 720 320, 790 120" fill="none" stroke="url(#lpRoute)" stroke-width="3.5" stroke-dasharray="8 10" stroke-linecap="round"/>
+                  <path id="lpR2" class="lp-route" d="M110 320 C 260 390, 460 400, 600 320" fill="none" stroke="#6FAEFF" stroke-width="2.5" stroke-dasharray="4 9" opacity=".6"/>
+                  <g class="lp-node"><circle cx="110" cy="320" r="18" class="h"/><circle cx="110" cy="320" r="7"/><text x="110" y="358">Asal</text></g>
+                  <g class="lp-node"><circle cx="355" cy="143" r="18" class="h"/><circle cx="355" cy="143" r="7"/><text x="355" y="115">Checkpoint</text></g>
+                  <g class="lp-node"><circle cx="610" cy="252" r="18" class="h"/><circle cx="610" cy="252" r="7"/><text x="610" y="290">Checkpoint</text></g>
+                  <g class="lp-node"><circle cx="790" cy="120" r="18" class="h"/><circle cx="790" cy="120" r="7"/><text x="790" y="90">Tujuan</text></g>
+                  <g transform="translate(458 158)"><path d="M0 12V0h12M56 0h12v12M68 44v12H56M12 56H0V44" fill="none" stroke="#8EC5FF" stroke-width="2.4" stroke-linecap="round"/><rect x="18" y="14" width="32" height="28" rx="3" fill="#4C93FF"/><path d="M18 24h32M34 14v10" stroke="#142D4E" stroke-width="2"/><rect x="-10" y="-30" width="112" height="22" rx="11" fill="#0F2342" stroke="#4C93FF" stroke-opacity=".7"/><text x="46" y="-15" text-anchor="middle" class="lp-chiptxt">Paket terdeteksi</text></g>
+                  <g><g transform="translate(-14 -10)"><path d="M0 12h28l-5 10H5z" fill="#fff"/><rect x="6" y="3" width="12" height="9" fill="#8EC5FF"/><rect x="9" y="-3" width="4" height="6" fill="#fff"/></g><animateMotion dur="14s" repeatCount="indefinite"><mpath href="#lpR2"/></animateMotion></g>
+                  <g><path d="M-14 0l28-5-9 5 9 5z M-4 -2l-6-12 4 0 8 10z M-4 2l-6 12 4 0 8-10z" fill="#fff"/><animateMotion dur="11s" repeatCount="indefinite" rotate="auto"><mpath href="#lpR1"/></animateMotion></g>
+                </svg>
+              </div>
             </div>
           </section>
 
-          <section id="lp-fitur" class="lp-sec">
-            <h2>Satu tampilan untuk seluruh perjalanan kiriman.</h2>
-            <p class="lp-lead">Semua yang perlu diketahui customer dan tim operasional, tanpa bolak-balik menanyakan status.</p>
-            <div class="lp-grid">
-              <article class="lp-card lp-wide"><h3>Linimasa yang jelas</h3><p>Setiap kejadian tercatat berurutan dengan waktu UTC, jadi mudah dicocokkan antarzona waktu.</p>
-                <ul class="lp-tl"><li><b>Kiriman diterima</b><span>di gudang asal</span></li><li><b>Berangkat dari asal</b><span>checkpoint 1</span></li><li class="on"><b>Dalam perjalanan</b><span>checkpoint 2</span></li><li><b>Tiba di tujuan</b><span>menunggu</span></li></ul></article>
-              <article class="lp-card"><h3>Checkpoint tercatat</h3><p>Riwayat pelacakan tersimpan per titik, bukan tebakan posisi.</p></article>
-              <article class="lp-card"><h3>ETA terbarui</h3><p>Perubahan estimasi tiba langsung terlihat di halaman kiriman.</p></article>
-              <article class="lp-card"><h3>Peta semua kiriman</h3><p>Pantau banyak kiriman sekaligus dalam satu peta dashboard.</p></article>
-              <article class="lp-card"><h3>Akses sesuai peran</h3><p>Setiap akun hanya melihat ruang kerja yang memang miliknya.</p></article>
+          <section id="lp-tentang" class="lp-sec">
+            <div class="lp-wrap lp-two">
+              <div><p class="lp-kicker">Tentang CargoTrace</p><h2>Satu tempat untuk mengetahui di mana kiriman Anda.</h2></div>
+              <div class="lp-prose"><p>CargoTrace adalah website pelacakan kiriman untuk customer dan tim logistik. Setiap kali kiriman melewati sebuah titik, tim operasional mencatatnya sebagai checkpoint beserta waktunya.</p><p>Anda bisa melihat riwayat perjalanan, perkiraan waktu tiba (ETA), dan status terbaru kapan saja tanpa menghubungi siapa pun.</p></div>
+            </div>
+          </section>
+
+          <section id="lp-fitur" class="lp-sec lp-alt">
+            <div class="lp-wrap">
+              <p class="lp-kicker">Fitur</p><h2>Yang bisa Anda lakukan di CargoTrace</h2>
+              <div class="lp-grid">
+                <article class="lp-card">${ic('shipments')}<h3>Lihat semua kiriman</h3><p>Daftar kiriman Anda lengkap dengan status dan rutenya.</p></article>
+                <article class="lp-card">${ic('locations')}<h3>Ikuti checkpoint</h3><p>Setiap titik yang dilalui tercatat berurutan dengan waktunya.</p></article>
+                <article class="lp-card">${ic('clock')}<h3>Cek estimasi tiba</h3><p>ETA diperbarui bila ada perubahan, dan keterlambatan ditandai.</p></article>
+                <article class="lp-card">${ic('map')}<h3>Lihat di peta</h3><p>Pantau rute banyak kiriman sekaligus dalam satu peta.</p></article>
+                <article class="lp-card">${ic('plus')}<h3>Ajukan pengiriman</h3><p>Kirim permintaan pengiriman baru langsung dari akun Anda.</p></article>
+                <article class="lp-card">${ic('bell')}<h3>Terima notifikasi</h3><p>Dapatkan kabar saat ada pembaruan penting pada kiriman.</p></article>
+              </div>
+            </div>
+          </section>
+
+          <section id="lp-status" class="lp-sec">
+            <div class="lp-wrap">
+              <p class="lp-kicker">Status kiriman</p><h2>Perjalanan kiriman dalam lima tahap</h2>
+              <p class="lp-lead">Setiap kiriman melewati tahap berikut. Status Anda selalu menunjukkan tahap yang sedang berjalan.</p>
+              <ol class="lp-flow">
+                <li><b>Dibuat</b><span>Data kiriman dicatat oleh tim operasional.</span></li>
+                <li><b>Dipesan</b><span>Pengiriman dijadwalkan bersama carrier.</span></li>
+                <li><b>Diambil</b><span>Barang dijemput dari lokasi asal.</span></li>
+                <li><b>Dalam perjalanan</b><span>Checkpoint dicatat sepanjang rute.</span></li>
+                <li><b>Terkirim</b><span>Barang sampai di tujuan.</span></li>
+              </ol>
+            </div>
+          </section>
+
+          <section id="lp-moda" class="lp-sec lp-alt">
+            <div class="lp-wrap">
+              <p class="lp-kicker">Moda transportasi</p><h2>Laut, udara, atau darat</h2>
+              <p class="lp-lead">Apa pun moda yang dipakai, riwayat perjalanannya tetap tampil dalam satu linimasa.</p>
+              <div class="lp-modes">
+                <div><svg viewBox="0 0 120 70"><path d="M8 40h104l-14 20H22z" fill="#142D4E"/><rect x="26" y="22" width="44" height="18" fill="#3D82F0"/><rect x="30" y="8" width="8" height="14" fill="#142D4E"/><rect x="74" y="28" width="22" height="12" fill="#8EB4EE"/></svg><h3>Kapal</h3><p>Pelabuhan ke pelabuhan untuk muatan besar.</p></div>
+                <div><svg viewBox="0 0 120 70"><path d="M8 38l100-14-26 14 26 14z M52 34l-22-26h10l28 24z M52 42l-22 26h10l28-24z" fill="#142D4E"/></svg><h3>Pesawat</h3><p>Kargo udara untuk pengiriman yang mendesak.</p></div>
+                <div><svg viewBox="0 0 120 70"><rect x="6" y="14" width="64" height="36" rx="3" fill="#3D82F0"/><path d="M74 24h24l14 14v12H74z" fill="#142D4E"/><circle cx="28" cy="54" r="8" fill="#fff" stroke="#142D4E" stroke-width="3"/><circle cx="92" cy="54" r="8" fill="#fff" stroke="#142D4E" stroke-width="3"/></svg><h3>Truk</h3><p>Penjemputan dan pengantaran sampai tujuan akhir.</p></div>
+              </div>
             </div>
           </section>
 
           <section id="lp-cara" class="lp-sec">
-            <h2>Mulai dalam tiga langkah.</h2>
-            <ol class="lp-steps"><li><span>1</span><h3>Daftar atau masuk</h3><p>Buat akun customer, lalu masuk ke ruang kerjamu.</p></li><li><span>2</span><h3>Buka kiriman</h3><p>Pilih kiriman dan lihat statusnya saat ini.</p></li><li><span>3</span><h3>Pantau sampai tiba</h3><p>Ikuti checkpoint dan perubahan ETA sampai tujuan.</p></li></ol>
-          </section>
-
-          <section id="lp-moda" class="lp-sec">
-            <h2>Laut, udara, atau darat. Tetap satu linimasa.</h2>
-            <div class="lp-modes">
-              <div><svg viewBox="0 0 120 70"><path d="M8 40h104l-14 20H22z" fill="#fff"/><rect x="26" y="22" width="44" height="18" fill="#8EC5FF"/><rect x="30" y="8" width="8" height="14" fill="#fff"/><rect x="74" y="28" width="22" height="12" fill="#3D8BFF"/></svg><h3>Kapal</h3><p>Pelabuhan ke pelabuhan</p></div>
-              <div><svg viewBox="0 0 120 70"><path d="M8 38l100-14-26 14 26 14z M52 34l-22-26h10l28 24z M52 42l-22 26h10l28-24z" fill="#fff"/></svg><h3>Pesawat</h3><p>Kargo udara</p></div>
-              <div><svg viewBox="0 0 120 70"><rect x="6" y="14" width="64" height="36" rx="3" fill="#3D8BFF"/><path d="M74 24h24l14 14v12H74z" fill="#fff"/><circle cx="28" cy="54" r="8" fill="#0A1B33" stroke="#fff" stroke-width="3"/><circle cx="92" cy="54" r="8" fill="#0A1B33" stroke="#fff" stroke-width="3"/></svg><h3>Truk</h3><p>Pengantaran akhir</p></div>
+            <div class="lp-wrap">
+              <p class="lp-kicker">Cara kerja</p><h2>Mulai dalam tiga langkah</h2>
+              <ol class="lp-steps">
+                <li><span>1</span><h3>Daftar akun</h3><p>Buat akun customer dengan nama dan email Anda. Tidak butuh waktu lama.</p></li>
+                <li><span>2</span><h3>Kiriman ditautkan</h3><p>Tim operasional menautkan kiriman ke akun Anda, lalu kiriman muncul di dashboard.</p></li>
+                <li><span>3</span><h3>Pantau sampai tiba</h3><p>Ikuti checkpoint, ETA, dan notifikasi sampai barang tiba di tujuan.</p></li>
+              </ol>
             </div>
           </section>
 
-          <section id="lp-peran" class="lp-sec lp-split">
-            <div><h2>Dibuat untuk customer, dipakai oleh tim.</h2><p class="lp-lead">Customer mendaftar sendiri untuk memantau kirimannya. Akun Operator dan Admin dibuat oleh administrator.</p></div>
-            <div class="lp-roles"><div><b>Customer</b><span>Daftar sendiri, pantau kiriman, ETA, dan ajukan pengiriman.</span></div><div><b>Operator</b><span>Catat checkpoint, kelola kiriman, dan tangani kendala.</span></div><div><b>Admin</b><span>Kelola pengguna, carrier, lokasi, dan audit log.</span></div></div>
+          <section id="lp-faq" class="lp-sec lp-alt">
+            <div class="lp-wrap lp-narrow">
+              <p class="lp-kicker">FAQ</p><h2>Pertanyaan yang sering diajukan</h2>
+              <div class="lp-faq">
+                <details><summary>Apakah posisi kiriman tampil langsung seperti GPS?</summary><p>Tidak. Posisi yang tampil berasal dari checkpoint yang dicatat tim operasional. Rute pada ilustrasi di halaman ini hanya contoh.</p></details>
+                <details><summary>Kenapa kirimanku belum muncul setelah mendaftar?</summary><p>Kiriman muncul setelah tim operasional menautkannya ke akun Anda. Hubungi tim yang menangani kiriman Anda bila belum muncul.</p></details>
+                <details><summary>Siapa yang bisa membuat akun sendiri?</summary><p>Pendaftaran terbuka untuk customer. Akun untuk tim operasional dan administrator dibuat oleh administrator.</p></details>
+                <details><summary>Waktu apa yang dipakai di CargoTrace?</summary><p>Semua waktu ditampilkan dalam UTC supaya seragam di berbagai zona waktu.</p></details>
+              </div>
+            </div>
           </section>
 
-          <section class="lp-final"><h2>Siap melihat kirimanmu?</h2><div class="lp-cta"><button class="lp-btn lp-light lp-big" type="button" data-action="landing-register">Daftar sekarang</button><button class="lp-btn lp-outline lp-big" type="button" data-action="landing-login">Masuk</button></div></section>
+          <section class="lp-final"><div class="lp-wrap"><h2>Siap memantau kiriman Anda?</h2><p>Daftar atau masuk untuk melihat status kiriman terbaru.</p><div class="lp-cta"><button class="lp-btn lp-light lp-big" type="button" data-action="landing-register">Daftar sekarang</button><button class="lp-btn lp-outline lp-big" type="button" data-action="landing-login">Masuk</button></div></div></section>
         </main>
-        <footer class="lp-foot"><span>© ${new Date().getUTCFullYear()} CargoTrace · All times UTC</span><span>Global shipment visibility · Rute di halaman ini hanya ilustrasi.</span></footer>
+        <footer class="lp-foot"><div class="lp-wrap"><span>© ${new Date().getUTCFullYear()} CargoTrace · Semua waktu dalam UTC</span><span>Global shipment visibility</span></div></footer>
       </div>`;
     ROOT.querySelectorAll('[data-action="landing-login"]').forEach(button => button.addEventListener('click', () => showLogin()));
     ROOT.querySelectorAll('[data-action="landing-register"]').forEach(button => button.addEventListener('click', () => showRegister()));
