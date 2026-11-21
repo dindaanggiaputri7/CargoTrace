@@ -1,123 +1,476 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# CargoTrace
+### Global Shipment Visibility & Tracking Platform
+
+CargoTrace is a web-based shipment visibility and logistics management platform built with Laravel. It helps logistics operators manage shipment requests, bookings, quotations, transport trips, tracking activities, and delivery exceptions in one integrated application.
+
+The platform provides customers with shipment progress visibility while giving logistics operators tools to manage operational workflows and monitor shipment activities.
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <a href="https://cargotrace-eoch.ethiodeploy.app">Live Application</a> ·
+  <a href="https://github.com/dindaanggiaputri7/CargoTrace">GitHub Repository</a>
 </p>
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Table of Contents
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- [Project Overview](#project-overview)
+- [Problem Statement](#problem-statement)
+- [Key Features](#key-features)
+- [User Roles](#user-roles)
+- [Shipment Workflow](#shipment-workflow)
+- [Technology Stack](#technology-stack)
+- [System Architecture](#system-architecture)
+- [Installation and Setup](#installation-and-setup)
+- [Environment Configuration](#environment-configuration)
+- [Running the Application](#running-the-application)
+- [Testing](#testing)
+- [API Documentation](#api-documentation)
+- [Deployment](#deployment)
+- [Project Documentation](#project-documentation)
+- [System Limitations](#system-limitations)
+- [Future Improvements](#future-improvements)
+- [Attribution](#attribution)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Project Overview
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Shipment information is often distributed across multiple operational processes, making it difficult for customers and logistics teams to monitor delivery progress. CargoTrace addresses this problem by providing a centralized platform for shipment management and tracking visibility.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+CargoTrace is developed as a **Laravel modular monolith** with three integrated functional layers:
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+1. **Shipment Visibility** — shipment management, tracking events, timeline, ETA, and exceptions.
+2. **Customer & Booking Management** — customer records, shipment requests, quotations, and payment processing.
+3. **Transport & External Integration** — transport assets, trips, shipment assignments, position records, and provider integrations.
 
-## Agentic Development
+The application is designed as an academic software engineering project using demonstration data and sandbox integrations.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Problem Statement
 
-```bash
-composer require laravel/boost --dev
+The project addresses several common logistics challenges:
 
-php artisan boost:install
+- Shipment information is difficult to monitor when stored in separate systems.
+- Customers may not have clear visibility into shipment status and journey history.
+- Delays and operational exceptions require centralized monitoring.
+- Logistics operators need a dashboard to identify shipments that require attention.
+- Booking and shipment activities need a structured workflow with traceable records.
+
+CargoTrace provides a centralized application to organize these activities and improve shipment visibility.
+
+## Key Features
+
+### 1. Shipment Management
+
+- Create and manage shipment records.
+- Store shipment details, cargo information, origin, and destination.
+- Manage shipment status through defined lifecycle stages.
+- Connect shipments with customer and transport records.
+
+### 2. Tracking and Shipment Timeline
+
+- Record shipment tracking events.
+- Display shipment journey history.
+- Store event timestamps and location information.
+- Display shipment locations on a map.
+- Distinguish recorded position data from verified live tracking.
+
+### 3. ETA, Delay, and Exception Management
+
+- Display estimated shipment arrival information.
+- Apply deterministic ETA and delay rules.
+- Monitor shipment exceptions.
+- Manage exception investigation and resolution status.
+
+### 4. Customer and Booking Management
+
+- Allow customers to submit shipment requests.
+- Allow operators to review, approve, reject, or request revisions.
+- Create and manage shipment quotations.
+- Convert eligible paid bookings into shipment records.
+- Maintain customer records for portal and walk-in customers.
+
+### 5. Payment Integration
+
+- Optional Midtrans Snap checkout integration.
+- Support for Midtrans Sandbox demonstrations.
+- Verify payment notifications through server-to-server webhook signatures.
+- Handle booking payment expiration.
+
+Payment confirmation relies on verified gateway notifications, not only browser redirects. The sandbox integration is intended for testing and academic demonstration, not real financial transactions.
+
+### 6. Transport Management
+
+- Register transport assets such as vessels, trucks, aircraft, and trains.
+- Manage transport trips and voyages.
+- Assign shipments to transport trip legs.
+- Record manual trip positions.
+- Maintain tracking provider configurations and synchronization logs.
+
+### 7. Dashboard and Operational Monitoring
+
+- Display shipment portfolio metrics.
+- Monitor shipment status.
+- View in-transit and delivered shipment counts.
+- Monitor delayed shipments and open exceptions.
+- Display shipment information through an operational dashboard.
+
+Dashboard figures are derived from application records.
+
+### 8. Role-Based Access
+
+CargoTrace provides role-based access for administrators, logistics operators, and customers. Access to shipment and operational information is restricted according to the user's role and ownership.
+
+---
+
+## User Roles
+
+| Role | Main Responsibilities |
+|---|---|
+| Administrator | Manage users, system configuration, carriers, locations, and operational records. |
+| Logistics Operator | Manage shipment requests, quotations, shipments, tracking events, exceptions, and transport operations. |
+| Customer | Submit shipment requests and view owned shipment information, booking progress, and transport journeys. |
+
+Authorization is enforced through application-side access controls. Customer access to shipment information is scoped to the customer's own records.
+
+## Shipment Workflow
+
+The main booking and shipment workflow is:
+
+1. A customer submits a shipment request.
+2. A logistics operator reviews the request.
+3. The operator approves, rejects, or requests revisions.
+4. The operator prepares a shipment quotation.
+5. The customer accepts the quotation.
+6. The customer completes payment through the configured payment gateway.
+7. A verified payment notification updates the booking payment status.
+8. The eligible booking can be converted into a shipment.
+9. The shipment continues through transport and tracking activities.
+
+The shipment lifecycle uses the following main status sequence:
+
+`CREATED → BOOKED → PICKED_UP → IN_TRANSIT → DELIVERED`
+
+Tracking events are stored as historical records so that shipment journey information can be reviewed over time.
+
+---
+
+## Technology Stack
+
+| Category | Technology |
+|---|---|
+| Backend | PHP 8.3+, Laravel 13 |
+| Database | MySQL |
+| ORM | Laravel Eloquent |
+| Frontend | Blade, JavaScript, CSS |
+| API | Laravel REST API |
+| API Authentication | Laravel Sanctum |
+| Asset Build Tool | Vite |
+| Payment Integration | Midtrans Sandbox (optional) |
+| Testing | PHPUnit / Laravel Testing |
+| Development Tools | Composer, Node.js, NPM, Git |
+| Deployment | EthioDeploy |
+
+---
+
+## System Architecture
+
+CargoTrace uses a modular monolithic architecture. The application is deployed as one Laravel application while separating responsibilities into functional modules and services.
+
+The general request flow is:
+
+```text
+User / Browser
+      |
+      v
+Laravel Routes & Middleware
+      |
+      v
+Controllers
+      |
+      v
+Business Logic / Services
+      |
+      v
+Eloquent Models
+      |
+      v
+MySQL Database
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+External integrations communicate with the application through dedicated API endpoints and Laravel's HTTP or webhook handling mechanisms.
 
-## Contributing
+The modular monolith approach keeps the application manageable while maintaining clear boundaries between shipment visibility, booking management, and transport integration.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## Installation and Setup
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Prerequisites
 
-## Security Vulnerabilities
+Make sure the development environment has:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- PHP 8.3 or later.
+- Composer.
+- MySQL 8 or compatible MySQL version.
+- Node.js and NPM.
+- Git.
+- A local PHP development environment such as Laragon.
 
-## License
+### 1. Clone the Repository
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+git clone https://github.com/dindaanggiaputri7/CargoTrace.git
 
-## Layer 2 — Customer & Booking Management
+cd CargoTrace
+```
 
-CargoTrace includes an additive Layer 2 booking workflow. Customers can submit shipment requests; operators can review, request revisions, approve/reject, issue quotations, and convert a paid booking into a shipment. The workflow reuses the existing shipment lifecycle, tracking events, notifications and audit logging.
+### 2. Install PHP Dependencies
 
-See `README_LAYER2_INSTALL_ID.md` for local installation and the full test scenario. Booking requests remain a separate record from shipments. Customer login identities are linked to customer directory records, while operators can also create walk-in customer records without a portal login. Payment is never simulated as successful: a booking can become paid only after a verified Midtrans server-to-server notification.
+```bash
+composer install
+```
 
+### 3. Install Frontend Dependencies
 
-## Layer 3 — Enterprise Transport & Integrations
+```bash
+npm install
+```
 
-Layer 3 is added on top of the existing Layer 1 shipment visibility and Layer 2 customer booking modules. It does not replace the current Laravel application or rebuild the earlier layers.
+### 4. Configure Environment
 
-### Implemented in this release
-- Transport asset registry for vessels, trucks, aircraft and trains.
-- Transport trip/voyage management and shipment-to-trip leg assignments.
-- Manual trip position capture, explicitly labelled `MANUAL / UNVERIFIED`.
-- Provider configuration with encrypted API credentials and hashed webhook secrets.
-- Inbound webhook support for AIS/GPS positions and carrier/port/customs shipment events.
-- Provider event idempotency and tracking synchronization logs.
-- Customer transport journey view scoped to shipments owned by the customer.
-- Optional Midtrans Snap checkout when merchant credentials are configured, with signed notification verification.
+Copy the example environment file:
 
-### Configure Midtrans sandbox (optional)
-1. Create a merchant account and obtain sandbox Server Key from Midtrans.
-2. Set `MIDTRANS_SERVER_KEY` in `.env`; set `MIDTRANS_IS_PRODUCTION=false`.
-3. Set the notification URL in Midtrans to `https://your-domain.example/api/integrations/payments/midtrans/notification`.
-4. Test using sandbox methods before enabling production credentials.
-5. Never commit `.env` or expose the Server Key.
-6. Keep `MIDTRANS_IS_PRODUCTION=false` while demonstrating with sandbox credentials.
-7. Confirm the checkout expiry is 24 hours; the gateway notification, not the browser redirect, confirms payment.
+```bash
+cp .env.example .env
+```
 
-Without `MIDTRANS_SERVER_KEY`, CargoTrace refuses to create a payment intent. It does not provide a mock checkout and cannot mark a payment PAID manually. Use Midtrans Sandbox for the academic demo; no real money should be collected.
+On Windows, you can also copy `.env.example` manually and rename the copy to `.env`.
 
-### Automatic booking-payment expiry
+Generate the application key:
 
-Unpaid attempts expire 24 hours after creation. Laravel Scheduler runs `cargotrace:expire-booking-payments` every minute. On a local development machine, start the scheduler in a separate terminal with `php artisan schedule:work`. On a server, configure the Laravel scheduler as a one-minute cron task. If the scheduler is stopped, an overdue attempt is also expired when the customer next tries to open checkout. A late gateway settlement notification is reconciled under a database lock; late `PENDING` notifications cannot revive an expired transaction.
+```bash
+php artisan key:generate
+```
 
-### Customer records and shipments
+### 5. Configure the Database
 
-`customers` is the customer directory. Portal customers have a linked `users` login; walk-in customers created by an operator may have no login. `shipments.customer_record_id` identifies the directory record; `shipments.customer_id` is retained as the optional login identity for customer authorization and notifications. `source_type` distinguishes manual shipments from booking conversions.
+Create a MySQL database for CargoTrace.
 
-### Configure tracking provider
-1. In Admin > Transport & Tracking, register a provider and choose AIS, GPS, Carrier, Port or Customs.
-2. Provide a unique webhook secret (at least 24 characters) and activate the provider.
-3. Configure the provider's webhook destination as `/api/integrations/tracking/{provider-id}/positions`.
-4. Send `X-CargoTrace-Webhook-Secret` and the provider payload described in `docs/API_REFERENCE.md`.
-5. Use unique provider event IDs. Duplicate events are ignored.
+Update the database settings in the `.env` file:
 
-The webhook is an integration contract, not a bundled AIS/GPS data subscription. A production feed still requires a provider account, supported API agreement, vessel/device identifiers and provider-specific mapping. The application must label old reports as stale and must not animate fabricated positions as live.
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=cargotrace
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-### Architecture and remaining extensions
-CargoTrace remains a Laravel modular monolith with separated domain services and API boundaries. This is intentional to preserve transaction integrity and keep the project deployable as one application. Independently deployed microservices are not introduced in this release.
+Use the database credentials configured in your local environment.
 
-A trained AI/ML ETA model is not included. A valid model requires historical shipment/trip outcomes, a training/evaluation process and drift monitoring. Existing deterministic ETA/delay rules remain the authoritative baseline until a model is validated.
+### 6. Run Database Migrations
 
-### Layer 3 tests
 ```bash
 php artisan migrate
-php artisan test
-php artisan route:list --path=api
 ```
 
-## Panduan revisi terintegrasi
+If the project provides seeders for your environment, run them with:
 
-Lihat [`docs/REVISION_GUIDE_ID.md`](docs/REVISION_GUIDE_ID.md) untuk ringkasan perubahan, langkah pemasangan Laragon, konfigurasi Midtrans Sandbox, scheduler expiry 24 jam, dan urutan demo final.
+```bash
+php artisan db:seed
+```
+
+Use the project's documented demo data and avoid running destructive database reset commands against an existing database.
+
+### 7. Build Frontend Assets
+
+```bash
+npm run build
+```
+
+---
+
+## Environment Configuration
+
+CargoTrace uses environment variables for database connections, application settings, and external service credentials.
+
+Important configuration examples include:
+
+| Variable | Purpose |
+|---|---|
+| `APP_URL` | Application base URL |
+| `DB_DATABASE` | MySQL database name |
+| `DB_USERNAME` | Database username |
+| `DB_PASSWORD` | Database password |
+| `MIDTRANS_SERVER_KEY` | Midtrans server credential |
+| `MIDTRANS_IS_PRODUCTION` | Select sandbox or production mode |
+| `MIDTRANS_SIGNATURE_SECRET_KEY` | Verify payment notification signatures |
+
+The exact variables required depend on the enabled integrations. Refer to [`docs/ENVIRONMENT_VARIABLES.md`](docs/ENVIRONMENT_VARIABLES.md) for additional configuration details.
+
+**Security note:** Never commit the `.env` file, payment credentials, webhook secrets, or other private API keys to the repository.
+
+---
+
+## Running the Application
+
+Start the Laravel development server:
+
+```bash
+php artisan serve
+```
+
+Start the frontend development server when needed:
+
+```bash
+npm run dev
+```
+
+Open the application in your browser:
+
+```text
+http://127.0.0.1:8000
+```
+
+For scheduled booking-payment expiration tasks during local development, run the Laravel scheduler in a separate terminal:
+
+```bash
+php artisan schedule:work
+```
+
+---
+
+## Testing
+
+CargoTrace includes automated tests for application functionality and business workflows.
+
+Run the test suite using:
+
+```bash
+php artisan test
+```
+
+The test suite can be used to verify application behavior, including:
+
+- Authentication and access control.
+- Shipment and booking workflows.
+- Shipment status and tracking operations.
+- Payment notification handling.
+- Validation and business rules.
+- Transport and integration-related behavior.
+
+For more detailed test scenarios, refer to:
+
+[`docs/TESTING_MATRIX.md`](docs/TESTING_MATRIX.md)
+
+---
+
+## API Documentation
+
+CargoTrace provides REST API endpoints for application operations and external integrations.
+
+The API documentation includes endpoint descriptions, request formats, authentication requirements, and integration payload information.
+
+- [API Reference](docs/API_REFERENCE.md)
+- [Postman Collection](docs/postman/)
+
+For API testing, use Postman and configure the required authentication token and environment values.
+
+API requests should follow the application's validation and authorization rules.
+
+---
+
+## Deployment
+
+The application is deployed through EthioDeploy.
+
+**Live URL:**  
+https://cargotrace-eoch.ethiodeploy.app
+
+The deployment uses the `deploy/cargotrace-uas` Git branch as its production branch.
+
+General deployment considerations:
+
+1. Configure the production environment variables.
+2. Configure the production database connection.
+3. Install Composer dependencies.
+4. Build frontend assets.
+5. Run database migrations.
+6. Configure the application document root and web server.
+7. Configure the Laravel scheduler if scheduled tasks are enabled.
+8. Verify application access and integration endpoints.
+
+Payment and tracking provider credentials must be configured separately when those integrations are enabled.
+
+---
+
+## Project Documentation
+
+Additional technical documentation is available in the repository:
+
+| Document | Description |
+|---|---|
+| [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md) | API endpoints and integration reference. |
+| [`docs/ENVIRONMENT_VARIABLES.md`](docs/ENVIRONMENT_VARIABLES.md) | Environment variable configuration. |
+| [`docs/TESTING_MATRIX.md`](docs/TESTING_MATRIX.md) | Test scenarios and verification matrix. |
+| [`docs/FRONTEND_API_MAP.md`](docs/FRONTEND_API_MAP.md) | Frontend-to-API mapping. |
+| [`docs/LAYER3_IMPLEMENTATION_NOTES.md`](docs/LAYER3_IMPLEMENTATION_NOTES.md) | Transport and integration implementation notes. |
+| [`README_BACKEND_INSTALL.md`](README_BACKEND_INSTALL.md) | Backend installation guide. |
+| [`README_FRONTEND_INSTALL_ID.md`](README_FRONTEND_INSTALL_ID.md) | Frontend installation guide. |
+| [`README_LAYER2_INSTALL_ID.md`](README_LAYER2_INSTALL_ID.md) | Booking module installation guide. |
+
+---
+
+## System Limitations
+
+The following limitations define the current project scope:
+
+- CargoTrace does not provide direct integration with real ports, customs authorities, or commercial carrier systems by default.
+- Manual trip positions are labeled `MANUAL / UNVERIFIED` and must not be interpreted as live GPS tracking.
+- AIS/GPS and carrier webhook functionality requires an external provider account and a compatible data feed.
+- Midtrans is configured for sandbox demonstration unless production credentials and configuration are deliberately provided.
+- ETA and delay handling use deterministic application rules; a trained AI/ML prediction model is not included.
+- Route lines on the map are intended for shipment visibility and do not represent turn-by-turn navigation.
+
+## Future Improvements
+
+Potential future improvements include:
+
+- Additional verified carrier and tracking provider integrations.
+- More comprehensive geocoding and weather service integrations.
+- Enhanced shipment analytics and operational reports.
+- More detailed notification preferences.
+- Expanded automated test coverage and continuous integration.
+- Improved monitoring for external service availability.
+
+---
+
+## Attribution
+
+CargoTrace is built using open-source technologies and third-party libraries, including Laravel and its ecosystem.
+
+- [Laravel](https://laravel.com/) — PHP application framework.
+- [Laravel Sanctum](https://laravel.com/docs/sanctum) — API authentication.
+- [Midtrans](https://midtrans.com/) — payment gateway integration.
+- Other dependencies are listed in `composer.json` and `package.json`.
+
+All third-party libraries, frameworks, and external services remain subject to their respective licenses and terms of use.
+
+---
+
+## Academic Project
+
+**Course:** Web Programming 2  
+**Project:** Final Semester Project (UAS)  
+**Application:** CargoTrace — Global Shipment Visibility & Tracking Platform
+
+The project demonstrates the development of a Laravel-based logistics application involving database management, business workflows, REST API development, external integrations, testing, and deployment.
+
+---
+
+<p align="center">
+  <strong>CargoTrace</strong><br>
+  Global Shipment Visibility & Tracking Platform
+</p>
