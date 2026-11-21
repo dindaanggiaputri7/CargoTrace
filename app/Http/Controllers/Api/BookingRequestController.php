@@ -352,6 +352,9 @@ class BookingRequestController extends Controller
                 throw ValidationException::withMessages(['amount' => ['Nilai pembayaran harus lebih besar dari nol.']]);
             }
             $payload = [
+                'callbacks' => [
+                    'finish' => 'https://cargotrace-eoch.ethiodeploy.app/',
+                ],
                 'transaction_details' => ['order_id' => $orderId, 'gross_amount' => $amount],
                 'customer_details' => ['first_name' => $request->user()->name, 'email' => $request->user()->email],
                 'item_details' => [[
