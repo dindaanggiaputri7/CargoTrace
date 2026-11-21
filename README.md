@@ -61,7 +61,7 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 
 CargoTrace includes an additive Layer 2 booking workflow. Customers can submit shipment requests; operators can review, request revisions, approve/reject, issue quotations, and convert a paid booking into a shipment. The workflow reuses the existing shipment lifecycle, tracking events, notifications and audit logging.
 
-See `README_LAYER2_INSTALL_ID.md` for local installation and the full test scenario. The included checkout is a **local demo simulation only** and does not process real payments. A real payment provider and its verified webhook flow must be configured separately before production use.
+See `README_LAYER2_INSTALL_ID.md` for local installation and the full test scenario. Booking requests remain a separate record from shipments. Customer login identities are linked to customer directory records, while operators can also create walk-in customer records without a portal login. Payment is never simulated as successful: a booking can become paid only after a verified Midtrans server-to-server notification.
 
 
 ## Layer 3 — Enterprise Transport & Integrations
@@ -84,8 +84,18 @@ Layer 3 is added on top of the existing Layer 1 shipment visibility and Layer 2 
 3. Set the notification URL in Midtrans to `https://your-domain.example/api/integrations/payments/midtrans/notification`.
 4. Test using sandbox methods before enabling production credentials.
 5. Never commit `.env` or expose the Server Key.
+6. Keep `MIDTRANS_IS_PRODUCTION=false` while demonstrating with sandbox credentials.
+7. Confirm the checkout expiry is 24 hours; the gateway notification, not the browser redirect, confirms payment.
 
-Without Midtrans credentials, the existing demo checkout remains restricted to local/testing and must not be represented as a real payment.
+Without `MIDTRANS_SERVER_KEY`, CargoTrace refuses to create a payment intent. It does not provide a mock checkout and cannot mark a payment PAID manually. Use Midtrans Sandbox for the academic demo; no real money should be collected.
+
+### Automatic booking-payment expiry
+
+Unpaid attempts expire 24 hours after creation. Laravel Scheduler runs `cargotrace:expire-booking-payments` every minute. On a local development machine, start the scheduler in a separate terminal with `php artisan schedule:work`. On a server, configure the Laravel scheduler as a one-minute cron task. If the scheduler is stopped, an overdue attempt is also expired when the customer next tries to open checkout. A late gateway settlement notification is reconciled under a database lock; late `PENDING` notifications cannot revive an expired transaction.
+
+### Customer records and shipments
+
+`customers` is the customer directory. Portal customers have a linked `users` login; walk-in customers created by an operator may have no login. `shipments.customer_record_id` identifies the directory record; `shipments.customer_id` is retained as the optional login identity for customer authorization and notifications. `source_type` distinguishes manual shipments from booking conversions.
 
 ### Configure tracking provider
 1. In Admin > Transport & Tracking, register a provider and choose AIS, GPS, Carrier, Port or Customs.
@@ -107,3 +117,7 @@ php artisan migrate
 php artisan test
 php artisan route:list --path=api
 ```
+
+## Panduan revisi terintegrasi
+
+Lihat [`docs/REVISION_GUIDE_ID.md`](docs/REVISION_GUIDE_ID.md) untuk ringkasan perubahan, langkah pemasangan Laragon, konfigurasi Midtrans Sandbox, scheduler expiry 24 jam, dan urutan demo final.

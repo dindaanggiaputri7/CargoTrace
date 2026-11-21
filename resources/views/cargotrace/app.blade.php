@@ -7,8 +7,9 @@
     <title>CargoTrace — Global Shipment Visibility</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('cargotrace/css/app.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('cargotrace/css/app.css') }}?v={{ @filemtime(public_path('cargotrace/css/app.css')) }}">
+    <link rel="stylesheet" href="{{ asset('cargotrace/css/redesign.css') }}?v={{ @filemtime(public_path('cargotrace/css/redesign.css')) }}">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body>
@@ -17,6 +18,6 @@
     </div>
     <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="{{ asset('cargotrace/js/app.js') }}" defer></script>
+    <script src="{{ asset('cargotrace/js/app.js') }}?v={{ @filemtime(public_path('cargotrace/js/app.js')) }}" defer></script>
 </body>
 </html>

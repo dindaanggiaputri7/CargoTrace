@@ -41,6 +41,15 @@ class TrackingService
                 throw ValidationException::withMessages(['coordinates' => 'Latitude dan longitude harus diisi berpasangan.']);
             }
 
+            $metadata = $data['metadata'] ?? [];
+            if (!empty($data['location_name'])) {
+                $metadata['location_name'] = trim($data['location_name']);
+                $metadata['location_address'] = $data['location_address'] ?? null;
+                $metadata['location_country'] = $data['location_country'] ?? null;
+                $metadata['location_region'] = $data['location_region'] ?? null;
+                $metadata['location_source'] = 'GEOCODING';
+            }
+
             $event = TrackingEvent::create([
                 'shipment_id' => $locked->id,
                 'location_id' => $data['location_id'] ?? null,
@@ -51,7 +60,7 @@ class TrackingService
                 'event_time' => $eventTime,
                 'latitude' => $data['latitude'] ?? null,
                 'longitude' => $data['longitude'] ?? null,
-                'metadata' => $data['metadata'] ?? null,
+                'metadata' => $metadata ?: null,
             ]);
 
             app(AuditService::class)->record($actor, 'TRACKING_EVENT_CREATED', 'TrackingEvent', $event->id,

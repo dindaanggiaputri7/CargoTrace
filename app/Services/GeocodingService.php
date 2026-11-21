@@ -34,12 +34,19 @@ class GeocodingService
         }
 
         return collect($response->json() ?? [])->filter(fn ($item) => isset($item['lat'], $item['lon']))
-            ->map(fn (array $item) => [
-                'display_name' => $item['display_name'] ?? '',
-                'latitude' => (float) $item['lat'],
-                'longitude' => (float) $item['lon'],
-                'type' => $item['type'] ?? null,
-                'country_code' => strtoupper($item['address']['country_code'] ?? ''),
-            ])->values()->all();
+            ->map(function (array $item) {
+                $address = $item['address'] ?? [];
+                return [
+                    'display_name' => $item['display_name'] ?? '',
+                    'latitude' => (float) $item['lat'],
+                    'longitude' => (float) $item['lon'],
+                    'type' => $item['type'] ?? null,
+                    'country' => $address['country'] ?? null,
+                    'country_code' => strtoupper($address['country_code'] ?? ''),
+                    'city' => $address['city'] ?? $address['town'] ?? $address['village'] ?? $address['municipality'] ?? $address['county'] ?? null,
+                    'region' => $address['state'] ?? $address['province'] ?? $address['region'] ?? null,
+                    'address' => $item['display_name'] ?? null,
+                ];
+            })->values()->all();
     }
 }

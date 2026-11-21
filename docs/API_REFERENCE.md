@@ -49,7 +49,11 @@ Dashboard stats include total, active, in-transit, delivered, delayed, delay rat
 | POST | `/locations` | Admin | Create location |
 | PUT/PATCH | `/locations/{location}` | Admin | Update location |
 | DELETE | `/locations/{location}` | Admin | Delete only if no shipment/tracking references it |
-| GET | `/locations/geocode/search?query=...` | Admin, throttled | Nominatim geocoding |
+| GET | `/locations/geocode/search?query=...` | Admin, throttled | Nominatim geocoding suggestions for Admin master locations |
+| GET | `/tracking/geocode/search?query=...` | Operator, throttled | Search any checkpoint place name and return selectable coordinates; result is saved on the tracking event and does not create an Admin Location |
+| GET | `/locations/unlocode/search?country_code=ID&city=...` | Admin, throttled | Official UNECE UN/LOCODE suggestions; Admin confirms the selected code |
+| GET | `/customers` | Admin, Operator | Customer directory including walk-in records and login-linked customers |
+| POST | `/customers` | Admin, Operator | Create a customer directory record; login account is optional |
 
 Location coordinates must be valid latitude `-90..90` and longitude `-180..180`.
 
@@ -67,7 +71,7 @@ Location coordinates must be valid latitude `-90..90` and longitude `-180..180`.
 
 List query params: `search`, `status`, `carrier_id`, `origin_location_id`, `destination_location_id`, `date_from`, `date_to`, `delayed`, `sort`, `direction`, `per_page`.
 
-Create shipment JSON fields: `customer_id`, `carrier_id`, `origin_location_id`, `destination_location_id`, `cargo_type`, `package_count`, `total_weight`, `weight_unit`, `total_volume`, `volume_unit`, `expected_departure_at`, `expected_arrival_at`; optional: `shipment_number`, `customer_reference`, `cargo_description`, `notes`, and `items[]`.
+Create shipment JSON fields: `customer_record_id` (preferred) or legacy `customer_id`, `carrier_id`, `origin_location_id`, `destination_location_id`, `cargo_type`, `package_count`, `total_weight`, `weight_unit`, `total_volume`, `volume_unit`, `expected_departure_at`, `expected_arrival_at`; optional: `shipment_number`, legacy `customer_reference`, `cargo_description`, `notes`, and `items[]`. The UI does not ask for a PO/customer reference. `shipment_number` is generated automatically when omitted. Original `expected_arrival_at` is the immutable baseline; revised carrier estimates must use the ETA endpoint (`current_eta`).
 
 Status transition JSON: `{ "status": "BOOKED", "description": "Booking confirmed" }`. Only the next lifecycle status is accepted.
 
@@ -78,12 +82,13 @@ ETA update JSON: `{ "current_eta": "2026-11-14T08:00:00Z", "reason": "Carrier ad
 | Method | Endpoint | Role | Purpose |
 |---|---|---|---|
 | GET | `/shipments/{shipment}/tracking-events` or `/tracking` | All (customer ownership enforced) | Chronological, paginated event history |
-| POST | `/shipments/{shipment}/tracking-events` or `/tracking` | Operator | Append location-only event |
+| POST | `/shipments/{shipment}/tracking-events` or `/tracking` | Operator | Append location-only event; accepts saved `location_id` or a geocoded free-text checkpoint |
+| GET | `/tracking/geocode/search?query=...` | Operator, throttled | Search any checkpoint location name and return selectable coordinates
 | GET | `/shipments/{shipment}/exceptions` | All (customer ownership enforced) | Related exceptions |
 | POST | `/shipments/{shipment}/exceptions` | Operator | Create exception, default status `OPEN` |
 | PATCH | `/exceptions/{exception}/status` or `/exceptions/{exception}` | Operator | Advance exception status |
 
-Location tracking JSON: `description`, `event_time`, optional `location_id`, or paired `latitude` + `longitude`, optional `metadata`. The endpoint sets event status to the shipment's current status; lifecycle changes must use the status endpoint.
+Location tracking JSON: `description`, `event_time`, optional saved `location_id`, or free-text `location_name` plus paired `latitude` + `longitude` (optional `location_address`, `location_country`, `location_region`), and optional `metadata`. Choose either `location_id` or `location_name`, not both. Free-text place details are retained in event metadata and do not create a master `locations` record. The endpoint sets event status to the shipment's current status; lifecycle changes must use the status endpoint.
 
 Exception types: `CUSTOMS_HOLD`, `WEATHER_DELAY`, `PORT_CONGESTION`, `DAMAGED`, `MISROUTED`, `DOCUMENTATION_ISSUE`.
 
@@ -117,17 +122,17 @@ Booking endpoints require Sanctum authentication. Customer access is owner-scope
 | POST | `/booking-requests/{booking}/quotation` | Operator | Create/send a quotation with carrier, amount, currency and expected schedule |
 | POST | `/booking-requests/{booking}/quotation/accept` | Owner Customer | Accept the current unexpired quotation |
 | POST | `/booking-requests/{booking}/quotation/decline` | Owner Customer | Decline the current quotation; operator can prepare a new version |
-| POST | `/booking-requests/{booking}/payments` | Owner Customer | Create payment intent for accepted quotation; local/testing only until a real provider is configured |
-| POST | `/booking-payments/{payment}/demo-confirm` | Owner Customer, local/testing only | Simulate successful payment; never processes real funds |
+| POST | `/booking-requests/{booking}/payments` | Owner Customer | Create or resume a 24-hour Midtrans Snap Sandbox/Production payment intent; unavailable without server credentials |
+| POST | `/integrations/payments/midtrans/notification` | Midtrans server-to-server | Verify signature and amount, then reconcile `PENDING`, `PAID`, `FAILED`, or `EXPIRED` status |
 | POST | `/booking-requests/{booking}/convert` | Operator | Convert `READY_FOR_CONVERSION` booking into one shipment; duplicate conversion is idempotent |
 
-Create booking JSON contains `origin_location_id`, `destination_location_id`, `cargo_type`, `package_count`, `total_weight`, `weight_unit`, `items[]`; optional fields include desired dates, description, total volume, volume unit and customer notes. Each item includes `item_name`, `quantity` and optional description/weight/volume fields.
+Create booking JSON contains `origin_location_id`, `destination_location_id`, `cargo_type`, `package_count`, `total_weight`, `weight_unit`, `total_volume`, `volume_unit`, future `desired_departure_at` and `desired_arrival_at`, and at least one `items[]` entry; description and customer notes are optional. Origin and destination must be selected from saved Admin locations. Each item includes `item_name`, `quantity` and optional description/weight/volume fields.
 
 Booking progression: `PENDING_REVIEW` → `NEEDS_REVISION` (if requested) → resubmitted as `PENDING_REVIEW`; or `APPROVED` → `QUOTED` → `QUOTE_ACCEPTED` → `PENDING_PAYMENT` → `READY_FOR_CONVERSION` → `CONVERTED`. Rejected/declined/cancelled states do not create shipments.
 
 Quotation and payment are separate from shipment lifecycle. Shipment number `CT-...` is only generated during conversion, after approval, accepted quotation and paid payment status. The initial shipment lifecycle still begins at `CREATED`.
 
-**Payment limitation:** the bundled payment checkout is a mock/demo adapter, enabled only when `APP_ENV` is `local` or `testing` and `CARGOTRACE_ALLOW_DEMO_PAYMENTS=true`. It is visibly marked DEMO and does not charge real money. Configure a real provider and verify signed server-to-server callbacks before any production transaction.
+**Payment behavior:** no mock payment adapter is available. Midtrans Snap creates the checkout and only a signature-verified server-to-server notification with a matching amount can mark a payment `PAID`. Unpaid attempts expire after 24 hours; Laravel Scheduler runs `cargotrace:expire-booking-payments` every minute. The browser redirect is not treated as proof of payment. Use Sandbox credentials for academic demonstrations.
 
 
 ## Layer 3 — Transport, position tracking and external integrations
@@ -189,7 +194,7 @@ Set `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, and `MIDTRANS_IS_PRODUCTION=fa
 
 `https://your-domain.example/api/integrations/payments/midtrans/notification`
 
-The server creates a Snap transaction through the configured environment and verifies the SHA-512 server-to-server notification signature before marking a payment as paid. Booking conversion remains operator-controlled and occurs only after payment confirmation. Without credentials, the local/testing demo checkout remains available only when `CARGOTRACE_ALLOW_DEMO_PAYMENTS=true`; production does not silently fall back to demo payment.
+The server creates a Snap transaction through the configured environment and verifies the SHA-512 server-to-server notification signature before marking a payment as paid. Booking conversion remains operator-controlled and occurs only after payment confirmation. Without `MIDTRANS_SERVER_KEY`, the payment endpoint returns HTTP 503 and does not create a payment or change the booking status.
 
 ### Remaining advanced extensions
 

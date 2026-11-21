@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Shipment;
+use App\Models\Customer;
 use App\Models\TrackingEvent;
 use App\Models\User;
 use App\Services\AuditService;
@@ -35,7 +36,7 @@ class ShipmentController extends Controller
         ]);
 
         $query = Shipment::query()->with([
-            'customer:id,name,email', 'carrier:id,name,code',
+            'customer:id,name,email', 'customerRecord:id,name,company_name,email,phone,user_id', 'carrier:id,name,code',
             'origin:id,name,city,region,country,latitude,longitude',
             'destination:id,name,city,region,country,latitude,longitude',
             'latestTrackingEvent.location',
@@ -81,6 +82,18 @@ class ShipmentController extends Controller
         $shipment = DB::transaction(function () use ($data, $request, $audit, $notifications) {
             $items = $data['items'] ?? [];
             unset($data['items']);
+            $customerRecordId = $data['customer_record_id'] ?? null;
+            $legacyCustomerId = $data['customer_id'] ?? null;
+            unset($data['customer_record_id']);
+            if ($customerRecordId) {
+                $customerRecord = Customer::findOrFail($customerRecordId);
+            } else {
+                $customerUser = User::query()->whereKey($legacyCustomerId)->where('role', User::ROLE_CUSTOMER)->firstOrFail();
+                $customerRecord = Customer::firstOrCreate(['user_id' => $customerUser->id], ['name' => $customerUser->name, 'email' => $customerUser->email]);
+            }
+            $data['customer_id'] = $customerRecord->user_id;
+            $data['customer_record_id'] = $customerRecord->id;
+            $data['source_type'] = 'MANUAL';
             $data['shipment_number'] = $data['shipment_number'] ?? $this->generateShipmentNumber();
             $data['created_by'] = $request->user()->id;
             $data['status'] = 'CREATED';
@@ -97,13 +110,15 @@ class ShipmentController extends Controller
             ]);
             $audit->record($request->user(), 'SHIPMENT_CREATED', 'Shipment', $shipment->id,
                 'Shipment '.$shipment->shipment_number.' dibuat.', null, $shipment->only(['shipment_number', 'status', 'customer_id', 'carrier_id']));
-            $notifications->send($shipment->customer, 'SHIPMENT_CREATED', 'Pengiriman baru dibuat',
-                'Pengiriman '.$shipment->shipment_number.' telah dibuat.', $shipment);
+            if ($shipment->customer) {
+                $notifications->send($shipment->customer, 'SHIPMENT_CREATED', 'Pengiriman baru dibuat',
+                    'Pengiriman '.$shipment->shipment_number.' telah dibuat.', $shipment);
+            }
             return $shipment;
         });
 
         return response()->json(['message' => 'Shipment berhasil dibuat.', 'data' => $shipment->load([
-            'customer:id,name,email', 'carrier', 'origin', 'destination', 'items', 'trackingEvents',
+            'customer:id,name,email', 'customerRecord:id,name,company_name,email,phone,user_id', 'carrier', 'origin', 'destination', 'items', 'trackingEvents',
         ])], 201);
     }
 
@@ -111,15 +126,21 @@ class ShipmentController extends Controller
     {
         $this->authorizeView($request, $shipment);
         $shipment->load([
-            'customer:id,name,email', 'creator:id,name', 'carrier', 'origin', 'destination', 'items',
+            'customer:id,name,email', 'customerRecord:id,name,company_name,email,phone,user_id', 'creator:id,name', 'carrier', 'origin', 'destination', 'items',
             'trackingEvents.location', 'trackingEvents.creator:id,name',
             'exceptions.reporter:id,name', 'exceptions.resolver:id,name',
         ]);
         $shipment->setAttribute('eta_assessment', $etaService->assess($shipment));
         $shipment->setAttribute('progress_percentage', $etaService->progressPercentage($shipment));
         $latest = $shipment->trackingEvents->sortBy([['event_time', 'desc'], ['id', 'desc']])->first();
+        $freeformName = $latest?->metadata['location_name'] ?? null;
         $shipment->setAttribute('current_location', $latest?->location ?? ($latest && $latest->latitude !== null ? [
-            'latitude' => $latest->latitude, 'longitude' => $latest->longitude,
+            'name' => $freeformName ?: 'Recorded checkpoint',
+            'city' => $freeformName,
+            'country' => $latest->metadata['location_country'] ?? null,
+            'region' => $latest->metadata['location_region'] ?? null,
+            'latitude' => $latest->latitude,
+            'longitude' => $latest->longitude,
         ] : null));
         if ($request->user()->isCustomer()) $shipment->makeHidden(['notes', 'created_by']);
         return response()->json(['data' => $shipment]);
@@ -144,7 +165,7 @@ class ShipmentController extends Controller
         $old = $shipment->only(array_keys($data));
         $shipment->update($data);
         $audit->record($request->user(), 'SHIPMENT_UPDATED', 'Shipment', $shipment->id, 'Detail shipment diperbarui.', $old, $shipment->fresh()->only(array_keys($data)));
-        return response()->json(['message' => 'Shipment diperbarui.', 'data' => $shipment->fresh(['customer', 'carrier', 'origin', 'destination', 'items'])]);
+        return response()->json(['message' => 'Shipment diperbarui.', 'data' => $shipment->fresh(['customer', 'customerRecord', 'carrier', 'origin', 'destination', 'items'])]);
     }
 
     /** Soft archive only: tracking, exception and audit history remain retained. */
@@ -218,7 +239,8 @@ class ShipmentController extends Controller
         return [
             'shipment_number' => ['nullable', 'string', 'max:50', 'unique:shipments,shipment_number'],
             'customer_reference' => ['nullable', 'string', 'max:100'],
-            'customer_id' => ['required', Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', User::ROLE_CUSTOMER)->where('is_active', true))],
+            'customer_record_id' => ['required_without:customer_id', 'nullable', 'integer', 'exists:customers,id'],
+            'customer_id' => ['required_without:customer_record_id', 'nullable', Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', User::ROLE_CUSTOMER)->where('is_active', true))],
             'carrier_id' => ['required', Rule::exists('carriers', 'id')->where(fn ($q) => $q->where('is_active', true))],
             'origin_location_id' => ['required', 'exists:locations,id', 'different:destination_location_id'],
             'destination_location_id' => ['required', 'exists:locations,id'],
@@ -259,7 +281,6 @@ class ShipmentController extends Controller
             'total_volume' => ['sometimes', 'numeric', 'gt:0'],
             'volume_unit' => ['sometimes', 'string', 'max:10'],
             'expected_departure_at' => ['sometimes', 'date'],
-            'expected_arrival_at' => ['sometimes', 'date'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:3000'],
         ];
     }

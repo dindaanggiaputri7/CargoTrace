@@ -1023,11 +1023,11 @@
       ]
     },
     {
-      "name": "Layer 2 \u2014 Customer Booking",
-      "description": "Booking, operator review, quotation, local mock payment, and booking-to-shipment conversion. No real payments are processed.",
+      "name": "Layer 2 — Customer Booking",
+      "description": "Booking, operator review, quotation, Midtrans Snap payment intent and verified webhook flow, and booking-to-shipment conversion. Configure Sandbox credentials to test payment.",
       "item": [
         {
-          "name": "Customer \u2014 Submit booking request",
+          "name": "Customer — Submit booking request",
           "request": {
             "method": "POST",
             "header": [
@@ -1080,7 +1080,7 @@
           ]
         },
         {
-          "name": "Customer / Operator \u2014 List booking requests",
+          "name": "Customer / Operator — List booking requests",
           "request": {
             "method": "GET",
             "header": [
@@ -1114,7 +1114,7 @@
           }
         },
         {
-          "name": "Customer / Operator \u2014 Booking detail",
+          "name": "Customer / Operator — Booking detail",
           "request": {
             "method": "GET",
             "header": [
@@ -1142,7 +1142,7 @@
           }
         },
         {
-          "name": "Operator \u2014 Review booking (approve)",
+          "name": "Operator — Review booking (approve)",
           "request": {
             "method": "POST",
             "header": [
@@ -1185,7 +1185,7 @@
           }
         },
         {
-          "name": "Operator \u2014 Create quotation",
+          "name": "Operator — Create quotation",
           "request": {
             "method": "POST",
             "header": [
@@ -1228,7 +1228,7 @@
           }
         },
         {
-          "name": "Customer \u2014 Accept quotation",
+          "name": "Customer — Accept quotation",
           "request": {
             "method": "POST",
             "header": [
@@ -1272,7 +1272,7 @@
           }
         },
         {
-          "name": "Customer \u2014 Create demo payment intent",
+          "name": "Customer — Create or resume Midtrans payment intent",
           "request": {
             "method": "POST",
             "header": [
@@ -1302,7 +1302,7 @@
                 "payments"
               ]
             },
-            "description": "LOCAL/TESTING ONLY. This creates a mock payment intent; no funds are charged.",
+            "description": "Requires MIDTRANS_SERVER_KEY. Returns 503 if gateway credentials are not configured. PAID can only be set by a verified Midtrans notification.",
             "body": {
               "mode": "raw",
               "raw": "{}",
@@ -1324,53 +1324,11 @@
                 ]
               }
             }
-          ]
+          ],
+          "description": "Requires MIDTRANS_SERVER_KEY. Returns 503 if gateway credentials are not configured. PAID can only be set by a verified Midtrans notification."
         },
         {
-          "name": "Customer \u2014 Confirm demo payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/booking-payments/{{paymentId}}/demo-confirm",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "booking-payments",
-                "{{paymentId}}",
-                "demo-confirm"
-              ]
-            },
-            "description": "LOCAL/TESTING ONLY. Simulates confirmation without processing real money.",
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Operator \u2014 Convert booking to shipment",
+          "name": "Operator — Convert booking to shipment",
           "request": {
             "method": "POST",
             "header": [
@@ -1415,7 +1373,7 @@
       ]
     },
     {
-      "name": "Layer 3 \u2014 Transport & Integrations",
+      "name": "Layer 3 — Transport & Integrations",
       "description": "Examples only. Use real IDs and provider-issued secrets. Provider webhook requires X-CargoTrace-Webhook-Secret. Never commit live credentials.",
       "item": [
         {

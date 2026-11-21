@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Customer;
+use Illuminate\Support\Facades\DB;
 use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -41,7 +43,13 @@ class AdminUserController extends Controller
         $data['email'] = strtolower($data['email']);
         $data['is_active'] ??= true;
         // User's hashed cast hashes plain text exactly once.
-        $user = User::create($data);
+        $user = DB::transaction(function () use ($data) {
+            $user = User::create($data);
+            if ($user->role === User::ROLE_CUSTOMER) {
+                Customer::firstOrCreate(['user_id' => $user->id], ['name' => $user->name, 'email' => $user->email]);
+            }
+            return $user;
+        });
         $audit->record($request->user(), 'USER_CREATED', 'User', $user->id, 'Akun baru dibuat.', null,
             $user->only(['name', 'email', 'role', 'is_active']));
 
@@ -66,7 +74,12 @@ class AdminUserController extends Controller
         $auditFields = array_diff_key($data, ['password' => true]);
         $old = $user->only(array_keys($auditFields));
         if (empty($data['password'])) unset($data['password']);
-        $user->update($data);
+        DB::transaction(function () use ($user, $data) {
+            $user->update($data);
+            if ($user->role === User::ROLE_CUSTOMER) {
+                Customer::firstOrCreate(['user_id' => $user->id], ['name' => $user->name, 'email' => $user->email]);
+            }
+        });
         if (array_key_exists('is_active', $data) && !$user->is_active) $user->tokens()->delete();
         $audit->record($request->user(), 'USER_UPDATED', 'User', $user->id, 'Data akun diperbarui.', $old,
             $user->fresh()->only(array_keys($auditFields)));
