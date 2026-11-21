@@ -186,6 +186,13 @@ class BookingWorkflowTest extends TestCase
         $booking = BookingRequest::findOrFail($bookingId);
         $booking->update(['status' => 'PENDING_PAYMENT']);
         $serverKey = 'test-midtrans-server-key';
+        $signatureSecretKey = 'test-midtrans-signature-secret';
+
+        config([
+            'services.midtrans.server_key' => $serverKey,
+            'services.midtrans.signature_secret_key' => $signatureSecretKey,
+
+        ]);
         config(['services.midtrans.server_key' => $serverKey]);
         $orderId = 'CTPAY-TEST-'.uniqid();
         $payment = BookingPayment::create([
@@ -203,7 +210,7 @@ class BookingWorkflowTest extends TestCase
         ]);
         $statusCode = '200';
         $grossAmount = '2500000.00';
-        $signature = hash('sha512', $orderId.$statusCode.$grossAmount.$serverKey);
+        $signature = hash('sha512', $orderId.$statusCode.$grossAmount.$signatureSecretKey);
 
         $this->postJson('/api/integrations/payments/midtrans/notification', [
             'order_id' => $orderId,
@@ -259,13 +266,16 @@ class BookingWorkflowTest extends TestCase
             'provider_reference' => 'CTPAY-EXPIRED-'.uniqid(), 'status' => 'EXPIRED',
             'expires_at' => now()->subMinute(),
         ]);
-        $key = 'test-midtrans-server-key';
-        config(['services.midtrans.server_key' => $key]);
+        $signatureSecretKey = 'test-midtrans-signature-secret';
+
+        config([
+            'services.midtrans.signature_secret_key' => $signatureSecretKey,
+        ]);
         $orderId = $payment->provider_reference;
         $grossAmount = '5000.00';
         $this->postJson('/api/integrations/payments/midtrans/notification', [
             'order_id' => $orderId, 'status_code' => '201', 'gross_amount' => $grossAmount,
-            'signature_key' => hash('sha512', $orderId.'201'.$grossAmount.$key),
+            'signature_key' => hash('sha512', $orderId.'201'.$grossAmount.$signatureSecretKey),
             'transaction_status' => 'pending',
         ])->assertOk();
         $this->assertDatabaseHas('booking_payments', ['id' => $payment->id, 'status' => 'EXPIRED']);

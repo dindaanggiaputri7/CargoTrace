@@ -28,11 +28,24 @@ class BookingPaymentController extends Controller
             'transaction_status' => ['required','string','max:30'],
             'fraud_status' => ['nullable','string','max:30'],
         ]);
-        $serverKey = trim((string) config('services.midtrans.server_key'));
-        abort_unless($serverKey !== '', 503, 'Payment provider is not configured.');
-        $expected = hash('sha512', $data['order_id'].$data['status_code'].$data['gross_amount'].$serverKey);
-        abort_unless(hash_equals($expected, $data['signature_key']), 401, 'Invalid payment notification signature.');
+        $signatureSecretKey = trim((string) config('services.midtrans.signature_secret_key'));
 
+        abort_unless(
+            $signatureSecretKey !== '',
+            503,
+            'Payment signature secret is not configured.'
+        );
+
+        $expected = hash(
+            'sha512',
+        $data['order_id'].$data['status_code'].$data['gross_amount'].$signatureSecretKey
+        );
+
+        abort_unless(
+            hash_equals($expected, $data['signature_key']),
+            401,
+            'Invalid payment notification signature.'
+        );
         $payment = BookingPayment::where('provider', 'midtrans')
             ->where('provider_reference', $data['order_id'])->firstOrFail();
 
